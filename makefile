@@ -19,7 +19,8 @@ OUTPUTS := \
 	lazygit/darkstar.yml \
 	nvim/colors/darkstar.lua \
 	opencode/darkstar.json \
-	zellij/darkstar.kdl
+	zellij/darkstar.kdl \
+	zed/darkstar.json
 
 all: $(OUTPUTS)
 
@@ -29,6 +30,7 @@ lazygit/darkstar.yml: TEMPLATE = LAZYGIT
 nvim/colors/darkstar.lua: TEMPLATE = NVIM
 opencode/darkstar.json: TEMPLATE = OPENCODE
 zellij/darkstar.kdl: TEMPLATE = ZELLIJ
+zed/darkstar.json: TEMPLATE = ZED
 
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
@@ -43,13 +45,14 @@ palette:
 	@awk -v strict=0 "$$CHECK_AWK"
 
 install: all
-	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes
+	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes ~/.config/zed/themes
 	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
 	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
 	install -m 644 nvim/colors/darkstar.lua ~/.config/nvim/colors/darkstar.lua
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
 	install -m 644 zellij/darkstar.kdl ~/.config/zellij/themes/darkstar.kdl
+	install -m 644 zed/darkstar.json ~/.config/zed/themes/darkstar.json
 
 clean:
 	rm -f $(OUTPUTS)
@@ -69,7 +72,7 @@ SCREENSHOTS := \
 	screenshots/opencode.png \
 	screenshots/zellij.png
 
-screenshots: $(SCREENSHOTS)
+screenshots: $(SCREENSHOTS) screenshots/zed.png
 
 # Every screenshot uses the same window size, in columns and rows.
 SIZE := 110 32
@@ -107,6 +110,13 @@ screenshots/zellij.png: ghostty/darkstar.toml zellij/darkstar.kdl repo
 $(SCREENSHOTS): makefile
 	@mkdir -p $(@D)
 	@sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
+	@echo "  $@"
+
+# Zed sizes its windows in points rather than cells. 983×664 matches the
+# Ghostty windows above.
+screenshots/zed.png: zed/darkstar.json repo makefile
+	@mkdir -p $(@D)
+	@sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
 	@echo "  $@"
 
 .PHONY: all check palette install clean screenshots
@@ -1408,6 +1418,249 @@ export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
 exec zellij --config-dir "$SCENE_DIR/zellij" --new-session-with-layout "$SCENE_DIR/zellij/layout.kdl" --session darkstar-screenshot
 endef
 
+
+define zed
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "Darkstar",
+  "author": "Henry Catalini Smith",
+  "themes": [
+    {
+      "name": "Darkstar",
+      "appearance": "dark",
+      "style": {
+        "background": "{{background_two}}",
+        "border": "{{very_dark}}",
+        "border.variant": "{{very_dark}}",
+        "border.focused": "{{blue}}",
+        "border.selected": "{{blue}}",
+        "border.transparent": "#00000000",
+        "border.disabled": "{{very_dark}}",
+        "elevated_surface.background": "{{background_two}}",
+        "surface.background": "{{background_two}}",
+        "element.background": "{{surface}}",
+        "element.hover": "{{very_dark}}",
+        "element.active": "{{selection_primary}}",
+        "element.selected": "{{selection_primary}}",
+        "element.disabled": "{{background_two}}",
+        "drop_target.background": "{{bright_blue}}33",
+        "ghost_element.background": "#00000000",
+        "ghost_element.hover": "{{very_dark}}",
+        "ghost_element.active": "{{selection_primary}}",
+        "ghost_element.selected": "{{selection_primary}}",
+        "ghost_element.disabled": "#00000000",
+        "text": "{{foreground}}",
+        "text.muted": "{{bright_black}}",
+        "text.placeholder": "{{black}}",
+        "text.disabled": "{{linenr}}",
+        "text.accent": "{{bright_blue}}",
+        "icon": "{{foreground}}",
+        "icon.muted": "{{bright_black}}",
+        "icon.disabled": "{{linenr}}",
+        "icon.placeholder": "{{black}}",
+        "icon.accent": "{{bright_blue}}",
+        "status_bar.background": "{{background_two}}",
+        "title_bar.background": "{{background_two}}",
+        "title_bar.inactive_background": "{{background_two}}",
+        "toolbar.background": "{{background}}",
+        "tab_bar.background": "{{background_two}}",
+        "tab.inactive_background": "{{background_two}}",
+        "tab.active_background": "{{background}}",
+        "search.match_background": "{{yellow}}66",
+        "panel.background": "{{background_two}}",
+        "panel.focused_border": "{{blue}}",
+        "pane.focused_border": "{{blue}}",
+        "scrollbar.thumb.background": "{{very_dark}}99",
+        "scrollbar.thumb.hover_background": "{{very_dark}}",
+        "scrollbar.thumb.border": "#00000000",
+        "scrollbar.track.background": "#00000000",
+        "scrollbar.track.border": "#00000000",
+        "editor.foreground": "{{foreground}}",
+        "editor.background": "{{background}}",
+        "editor.gutter.background": "{{background}}",
+        "editor.subheader.background": "{{background_two}}",
+        "editor.active_line.background": "{{cursorline}}",
+        "editor.highlighted_line.background": "{{cursorline}}",
+        "editor.line_number": "{{linenr}}",
+        "editor.active_line_number": "{{blue}}",
+        "editor.invisible": "{{very_dark}}",
+        "editor.wrap_guide": "{{very_dark}}",
+        "editor.active_wrap_guide": "{{linenr}}",
+        "editor.indent_guide": "{{very_dark}}",
+        "editor.indent_guide_active": "{{linenr}}",
+        "editor.document_highlight.read_background": "{{very_dark}}80",
+        "editor.document_highlight.write_background": "{{very_dark}}",
+        "terminal.background": "{{background}}",
+        "terminal.foreground": "{{foreground}}",
+        "terminal.bright_foreground": "{{bright_white}}",
+        "terminal.dim_foreground": "{{bright_black}}",
+        "terminal.ansi.black": "{{black}}",
+        "terminal.ansi.red": "{{red}}",
+        "terminal.ansi.green": "{{green}}",
+        "terminal.ansi.yellow": "{{yellow}}",
+        "terminal.ansi.blue": "{{blue}}",
+        "terminal.ansi.magenta": "{{magenta}}",
+        "terminal.ansi.cyan": "{{cyan}}",
+        "terminal.ansi.white": "{{white}}",
+        "terminal.ansi.bright_black": "{{bright_black}}",
+        "terminal.ansi.bright_red": "{{bright_red}}",
+        "terminal.ansi.bright_green": "{{bright_green}}",
+        "terminal.ansi.bright_yellow": "{{bright_yellow}}",
+        "terminal.ansi.bright_blue": "{{bright_blue}}",
+        "terminal.ansi.bright_magenta": "{{bright_magenta}}",
+        "terminal.ansi.bright_cyan": "{{bright_cyan}}",
+        "terminal.ansi.bright_white": "{{bright_white}}",
+        "link_text.hover": "{{bright_blue}}",
+        "conflict": "{{bright_orange}}",
+        "conflict.background": "{{mix orange background 0.82}}",
+        "conflict.border": "{{orange}}",
+        "created": "{{bright_green}}",
+        "created.background": "{{mix green background 0.82}}",
+        "created.border": "{{green}}",
+        "deleted": "{{bright_red}}",
+        "deleted.background": "{{mix red background 0.82}}",
+        "deleted.border": "{{red}}",
+        "error": "{{bright_red}}",
+        "error.background": "{{mix red background 0.82}}",
+        "error.border": "{{red}}",
+        "hidden": "{{linenr}}",
+        "hint": "{{bright_black}}",
+        "hint.background": "{{background_two}}",
+        "hint.border": "{{very_dark}}",
+        "ignored": "{{linenr}}",
+        "info": "{{bright_blue}}",
+        "info.background": "{{mix blue background 0.82}}",
+        "info.border": "{{blue}}",
+        "modified": "{{bright_yellow}}",
+        "modified.background": "{{mix yellow background 0.82}}",
+        "modified.border": "{{yellow}}",
+        "predictive": "{{bright_black}}",
+        "renamed": "{{bright_blue}}",
+        "success": "{{bright_green}}",
+        "success.background": "{{mix green background 0.82}}",
+        "success.border": "{{green}}",
+        "unreachable": "{{bright_black}}",
+        "warning": "{{bright_yellow}}",
+        "warning.background": "{{mix yellow background 0.82}}",
+        "warning.border": "{{yellow}}",
+        "players": [
+          { "cursor": "{{foreground}}", "background": "{{foreground}}", "selection": "{{selection_primary}}" },
+          { "cursor": "{{bright_magenta}}", "background": "{{bright_magenta}}", "selection": "{{bright_magenta}}33" },
+          { "cursor": "{{bright_green}}", "background": "{{bright_green}}", "selection": "{{bright_green}}33" },
+          { "cursor": "{{bright_orange}}", "background": "{{bright_orange}}", "selection": "{{bright_orange}}33" },
+          { "cursor": "{{bright_cyan}}", "background": "{{bright_cyan}}", "selection": "{{bright_cyan}}33" },
+          { "cursor": "{{bright_yellow}}", "background": "{{bright_yellow}}", "selection": "{{bright_yellow}}33" }
+        ],
+        "syntax": {
+          "attribute": { "color": "{{bright_yellow}}" },
+          "boolean": { "color": "{{bright_yellow}}" },
+          "comment": { "color": "{{black}}", "font_style": "italic" },
+          "comment.doc": { "color": "{{black}}", "font_style": "italic" },
+          "constant": { "color": "{{bright_magenta}}" },
+          "constructor": { "color": "{{bright_yellow}}" },
+          "embedded": { "color": "{{foreground}}" },
+          "emphasis": { "color": "{{bright_yellow}}", "font_style": "italic" },
+          "emphasis.strong": { "color": "{{bright_yellow}}", "font_weight": 700 },
+          "enum": { "color": "{{bright_yellow}}" },
+          "function": { "color": "{{bright_yellow}}" },
+          "function.builtin": { "color": "{{magenta}}" },
+          "hint": { "color": "{{bright_black}}", "font_style": "italic" },
+          "keyword": { "color": "{{bright_red}}" },
+          "label": { "color": "{{magenta}}" },
+          "link_text": { "color": "{{bright_yellow}}" },
+          "link_uri": { "color": "{{bright_blue}}" },
+          "number": { "color": "{{bright_blue}}" },
+          "operator": { "color": "{{foreground}}" },
+          "predictive": { "color": "{{bright_black}}", "font_style": "italic" },
+          "preproc": { "color": "{{bright_orange}}" },
+          "primary": { "color": "{{foreground}}" },
+          "property": { "color": "{{foreground}}" },
+          "punctuation": { "color": "{{foreground}}" },
+          "punctuation.bracket": { "color": "{{foreground}}" },
+          "punctuation.delimiter": { "color": "{{foreground}}" },
+          "punctuation.list_marker": { "color": "{{bright_red}}" },
+          "punctuation.special": { "color": "{{bright_orange}}" },
+          "string": { "color": "{{bright_green}}" },
+          "string.escape": { "color": "{{bright_yellow}}" },
+          "string.regex": { "color": "{{bright_yellow}}" },
+          "string.special": { "color": "{{bright_yellow}}" },
+          "string.special.symbol": { "color": "{{bright_yellow}}" },
+          "tag": { "color": "{{bright_magenta}}" },
+          "text.literal": { "color": "{{bright_magenta}}" },
+          "title": { "color": "{{bright_green}}", "font_weight": 700 },
+          "type": { "color": "{{bright_blue}}" },
+          "variable": { "color": "{{foreground}}" },
+          "variable.special": { "color": "{{bright_red}}" },
+          "variant": { "color": "{{bright_yellow}}" }
+        }
+      }
+    }
+  ]
+}
+endef
+
+
+# Zed isn't a terminal program, so it gets its own screenshot script. It
+# runs a separate copy of Zed with its own settings, tries to resize the
+# window to match the Ghostty ones and captures it.
+#
+# Arguments: output file, window width and height in points.
+define zed_screenshot_sh
+set -e
+out="$PWD/$1"; width="$2"; height="$3"
+darkstar="$PWD"
+dir=$(mktemp -d /tmp/zed.XXXX)
+trap 'rm -rf "$dir"' EXIT
+
+mkdir -p "$dir/config/themes"
+cp "$darkstar/zed/darkstar.json" "$dir/config/themes/"
+cat > "$dir/config/settings.json" <<'JSON'
+{
+  "theme": { "mode": "dark", "dark": "Darkstar", "light": "Darkstar" },
+  "session": { "trust_all_worktrees": true },
+  "auto_update": false,
+  "telemetry": { "diagnostics": false, "metrics": false },
+  "enable_language_server": false,
+  "show_edit_predictions": false,
+  "title_bar": { "show_user_picture": false, "show_sign_in": false },
+  "collaboration_panel": { "button": false },
+  "agent": { "enabled": false, "button": false },
+  "restore_on_startup": "none",
+  "cursor_blink": false,
+  "ui_font_size": 15,
+  "buffer_font_size": 15
+}
+JSON
+
+cd "$darkstar/repo"
+/Applications/Zed.app/Contents/MacOS/zed --user-data-dir "$dir" . src/cart.ts:24 > /dev/null 2>&1 &
+pid=$!
+
+window=
+for i in $(seq 50); do
+  window=$(osascript -l JavaScript -e "$WINDOW_ID_JS" "$pid")
+  [ -n "$window" ] && break
+  sleep 0.2
+done
+if [ -z "$window" ]; then
+  echo "couldn't find the Zed window" >&2
+  kill "$pid"
+  exit 1
+fi
+
+osascript -e "tell application \"System Events\" to tell (first process whose unix id is $pid) to set size of window 1 to {$width, $height}" > /dev/null 2>&1 ||
+  echo "couldn't resize the Zed window: does this terminal have Accessibility permission?" >&2
+
+sleep 4
+screencapture -x -o -l "$window" "$out" || {
+  echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
+  kill "$pid"
+  exit 1
+}
+kill "$pid"
+wait "$pid" 2>/dev/null || true
+endef
+
 export PALETTE := $(value palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
@@ -1426,3 +1679,5 @@ export NVIM := $(value nvim)
 export NVIM_SCENE := $(value nvim_scene)
 export ZELLIJ := $(value zellij)
 export ZELLIJ_SCENE := $(value zellij_scene)
+export ZED := $(value zed)
+export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
