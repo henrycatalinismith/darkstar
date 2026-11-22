@@ -13,7 +13,62 @@
 # palette colour and {{mix a b t}} for a blend of two colours, where t is how far
 # to move from a towards b. Each theme gets its own copy of every file,
 # rendered from the same templates with that theme's palette.
-
+#
+# Design goals:
+#
+#   1. Every colour is readable as text
+#
+#      Every colour reaches at least WCAG AA against the background. This is
+#      a departure from Solarized which defines several colours that it intends
+#      as background colours despite the reality that terminal software authors
+#      use all palette colours as foreground colours in practice. Solarized is
+#      broken in many real-life workloads as a result of this and patching this
+#      problem is the original inspiration for creating Darkstar.
+#
+#   2. Real bright variants
+#
+#      Every colour has a "bright" variant which is a brighter version of
+#      itself rather than a grey. Solarized reuses its greys for many of the
+#      bright variants which leads to confusing outcomes in terminal software
+#      that expects e.g. "bright blue" to actually be blue and patching this
+#      issue is one of the other original goals that led to the creation of
+#      Darkstar.
+#
+#   3. Feel like Solarized
+#,
+#      Solarized is an absolutely legendary colour palette and its hues carry
+#      nostalgic connotations of home for many people. The third but by no
+#      means least important design pillar of Darkstar is that achieving the
+#      two design goals above must be balanced with preserving Solarized's hues
+#      in the accent colours to the maximum possible extent because otherwise
+#      the entire endeavour is meaningless.
+#
+# Design tradeoffs:
+#
+#   1. The light palette's accent colours differ from dark mode's
+#
+#      Reusing the same exact foreground accent colours in both dark and light
+#      mode is a very impressive technical achievement in Solarized. Darkstar
+#      prioritises usability over preserving this very cool symmetry.
+#
+#   2. The light themes don't use the same accent colours as the dark themes
+#
+#      Yellow on white is very difficult. Accessible contrast ratios are not
+#      really achievable for this colour pair, which is a huge shame because the
+#      Solarized yellow accent colour looks fantastic and really pops against
+#      the dark mode background. Instead of attempting to mirror the colours
+#      perfectly and use yellow in all the same places in both modes, we
+#      replace it with other colours in light mode and let colours play to
+#      their strengths rather than botch accessibility in the name of symmetry.
+#
+#   3. Higher contrast
+#
+#      Solarized has relatively low contrast between the foreground and
+#      background colours. This has upsides for some people as certain kinds
+#      of visual impairment make bright foreground colours on dark backgrounds
+#      difficult to read. Darkstar trades away that niche accessibility win in
+#      exchange for better baseline contrast accessibility across the board.
+ 
 THEMES := darkstar lightstar
 
 OUTPUTS := \
