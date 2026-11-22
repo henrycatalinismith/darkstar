@@ -18,7 +18,8 @@ OUTPUTS := \
 	helix/darkstar.toml \
 	lazygit/darkstar.yml \
 	nvim/colors/darkstar.lua \
-	opencode/darkstar.json
+	opencode/darkstar.json \
+	zellij/darkstar.kdl
 
 all: $(OUTPUTS)
 
@@ -27,6 +28,7 @@ helix/darkstar.toml: TEMPLATE = HELIX
 lazygit/darkstar.yml: TEMPLATE = LAZYGIT
 nvim/colors/darkstar.lua: TEMPLATE = NVIM
 opencode/darkstar.json: TEMPLATE = OPENCODE
+zellij/darkstar.kdl: TEMPLATE = ZELLIJ
 
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
@@ -41,12 +43,13 @@ palette:
 	@awk -v strict=0 "$$CHECK_AWK"
 
 install: all
-	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes
+	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes
 	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
 	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
 	install -m 644 nvim/colors/darkstar.lua ~/.config/nvim/colors/darkstar.lua
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
+	install -m 644 zellij/darkstar.kdl ~/.config/zellij/themes/darkstar.kdl
 
 clean:
 	rm -f $(OUTPUTS)
@@ -63,7 +66,8 @@ SCREENSHOTS := \
 	screenshots/helix.png \
 	screenshots/lazygit.png \
 	screenshots/nvim.png \
-	screenshots/opencode.png
+	screenshots/opencode.png \
+	screenshots/zellij.png
 
 screenshots: $(SCREENSHOTS)
 
@@ -94,6 +98,11 @@ screenshots/opencode.png: SCENE = OPENCODE_SCENE
 screenshots/opencode.png: TITLE = opencode
 screenshots/opencode.png: WAIT = 5
 screenshots/opencode.png: ghostty/darkstar.toml opencode/darkstar.json repo
+
+screenshots/zellij.png: SCENE = ZELLIJ_SCENE
+screenshots/zellij.png: TITLE = Zellij
+screenshots/zellij.png: WAIT = 3
+screenshots/zellij.png: ghostty/darkstar.toml zellij/darkstar.kdl repo
 
 $(SCREENSHOTS): makefile
 	@mkdir -p $(@D)
@@ -1212,6 +1221,193 @@ cd "$DARKSTAR/repo"
 exec nvim -i NONE -n src/cart.ts +24
 endef
 
+
+define zellij
+themes {
+    darkstar {
+        text_unselected {
+            base "{{foreground}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        text_selected {
+            base "{{foreground}}"
+            background "{{selection_primary}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        ribbon_selected {
+            base "{{background}}"
+            background "{{bright_green}}"
+            emphasis_0 "{{red}}"
+            emphasis_1 "{{orange}}"
+            emphasis_2 "{{magenta}}"
+            emphasis_3 "{{blue}}"
+        }
+        ribbon_unselected {
+            base "{{foreground}}"
+            background "{{surface}}"
+            emphasis_0 "{{bright_red}}"
+            emphasis_1 "{{bright_orange}}"
+            emphasis_2 "{{bright_magenta}}"
+            emphasis_3 "{{bright_blue}}"
+        }
+        table_title {
+            base "{{bright_green}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        table_cell_selected {
+            base "{{foreground}}"
+            background "{{selection_primary}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        table_cell_unselected {
+            base "{{foreground}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        list_selected {
+            base "{{foreground}}"
+            background "{{selection_primary}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        list_unselected {
+            base "{{foreground}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_green}}"
+            emphasis_3 "{{bright_magenta}}"
+        }
+        frame_selected {
+            base "{{foreground}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_magenta}}"
+            emphasis_3 "{{background}}"
+        }
+        frame_unselected {
+            base "{{linenr}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_orange}}"
+            emphasis_1 "{{bright_cyan}}"
+            emphasis_2 "{{bright_magenta}}"
+            emphasis_3 "{{background}}"
+        }
+        frame_highlight {
+            base "{{bright_orange}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_magenta}}"
+            emphasis_1 "{{bright_orange}}"
+            emphasis_2 "{{bright_orange}}"
+            emphasis_3 "{{bright_orange}}"
+        }
+        exit_code_success {
+            base "{{bright_green}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_cyan}}"
+            emphasis_1 "{{background}}"
+            emphasis_2 "{{bright_magenta}}"
+            emphasis_3 "{{bright_blue}}"
+        }
+        exit_code_error {
+            base "{{bright_red}}"
+            background "{{background}}"
+            emphasis_0 "{{bright_yellow}}"
+            emphasis_1 "{{background}}"
+            emphasis_2 "{{background}}"
+            emphasis_3 "{{background}}"
+        }
+        multiplayer_user_colors {
+            player_1 "{{bright_magenta}}"
+            player_2 "{{bright_blue}}"
+            player_3 "{{bright_green}}"
+            player_4 "{{bright_yellow}}"
+            player_5 "{{bright_cyan}}"
+            player_6 "{{bright_red}}"
+            player_7 "{{bright_orange}}"
+            player_8 "{{magenta}}"
+            player_9 "{{blue}}"
+            player_10 "{{cyan}}"
+        }
+    }
+}
+endef
+
+define zellij_scene
+mkdir -p "$SCENE_DIR/zellij/themes"
+cp "$DARKSTAR/zellij/darkstar.kdl" "$SCENE_DIR/zellij/themes/"
+cat > "$SCENE_DIR/zellij/config.kdl" <<'KDL'
+theme "darkstar"
+show_startup_tips false
+show_release_notes false
+session_serialization false
+on_force_close "quit"
+pane_frames true
+pane_frame_style "full"
+default_shell "sh"
+KDL
+cat > "$SCENE_DIR/zellij/layout.kdl" <<KDL
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=2 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+    tab name="basket" focus=true {
+        pane split_direction="vertical" {
+            pane name="log" focus=true command="sh" {
+                args "-c" "tput civis; stty -echo; git log --graph --oneline --decorate --color=always --all; sleep 600"
+                cwd "$DARKSTAR/repo"
+            }
+            pane split_direction="horizontal" {
+                pane name="status" command="git" {
+                    args "-c" "color.status=always" "status" "--short" "--branch"
+                    cwd "$DARKSTAR/repo"
+                }
+                pane name="test" command="sh" {
+                    args "-c" "printf 'node test/cart.test.ts\n'; exit 1"
+                    cwd "$DARKSTAR/repo"
+                }
+            }
+        }
+    }
+    tab name="notes" {
+        pane
+    }
+    tab name="server" {
+        pane
+    }
+}
+KDL
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
+exec zellij --config-dir "$SCENE_DIR/zellij" --new-session-with-layout "$SCENE_DIR/zellij/layout.kdl" --session darkstar-screenshot
+endef
+
 export PALETTE := $(value palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
@@ -1228,3 +1424,5 @@ export OPENCODE := $(value opencode)
 export OPENCODE_SCENE := $(value opencode_scene)
 export NVIM := $(value nvim)
 export NVIM_SCENE := $(value nvim_scene)
+export ZELLIJ := $(value zellij)
+export ZELLIJ_SCENE := $(value zellij_scene)
