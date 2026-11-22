@@ -12,13 +12,13 @@
 # to move from a towards b.
 
 OUTPUTS := \
-	ghostty/darkstar \
+	ghostty/darkstar.toml \
 	helix/darkstar.toml \
 	lazygit/darkstar.yml
 
 all: $(OUTPUTS)
 
-ghostty/darkstar: TEMPLATE = GHOSTTY
+ghostty/darkstar.toml: TEMPLATE = GHOSTTY
 helix/darkstar.toml: TEMPLATE = HELIX
 lazygit/darkstar.yml: TEMPLATE = LAZYGIT
 
@@ -36,7 +36,7 @@ palette:
 
 install: all
 	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit
-	install -m 644 ghostty/darkstar ~/.config/ghostty/themes/darkstar
+	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
 	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
 
