@@ -8,60 +8,80 @@
 #   make screenshots  capture each app in Ghostty (macOS only)
 #   make clean    delete the rendered theme files and ./repo
 #
-# Everything lives in this file: the palette, the templates for each app
-# and the awk that renders them. Templates use {{name}} for a palette
-# colour and {{mix a b t}} for a blend of two colours, where t is how far
-# to move from a towards b.
+# Everything lives in this file: the palettes, the templates for each app
+# and the awk that renders them. Templates use {{red}} and so on for a
+# palette colour and {{mix a b t}} for a blend of two colours, where t is how far
+# to move from a towards b. Each theme gets its own copy of every file,
+# rendered from the same templates with that theme's palette.
+
+THEMES := darkstar lightstar
 
 OUTPUTS := \
-	ghostty/darkstar.toml \
-	helix/darkstar.toml \
-	lazygit/darkstar.yml \
-	nvim/colors/darkstar.lua \
-	opencode/darkstar.json \
-	zellij/darkstar.kdl \
-	zed/darkstar.json \
+	$(THEMES:%=ghostty/%.toml) \
+	$(THEMES:%=helix/%.toml) \
+	$(THEMES:%=lazygit/%.yml) \
+	$(THEMES:%=nvim/colors/%.lua) \
+	$(THEMES:%=zellij/%.kdl) \
+	$(THEMES:%=zed/%.json) \
 	vscode/package.json \
-	vscode/darkstar-color-theme.json
+	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS)
+all: $(OUTPUTS) opencode/darkstar.json
 
-ghostty/darkstar.toml: TEMPLATE = GHOSTTY
-helix/darkstar.toml: TEMPLATE = HELIX
-lazygit/darkstar.yml: TEMPLATE = LAZYGIT
-nvim/colors/darkstar.lua: TEMPLATE = NVIM
-opencode/darkstar.json: TEMPLATE = OPENCODE
-zellij/darkstar.kdl: TEMPLATE = ZELLIJ
-zed/darkstar.json: TEMPLATE = ZED
+ghostty/%.toml: TEMPLATE = GHOSTTY
+helix/%.toml: TEMPLATE = HELIX
+lazygit/%.yml: TEMPLATE = LAZYGIT
+nvim/colors/%.lua: TEMPLATE = NVIM
+zellij/%.kdl: TEMPLATE = ZELLIJ
+zed/%.json: TEMPLATE = ZED
 vscode/package.json: TEMPLATE = VSCODE_PACKAGE
-vscode/darkstar-color-theme.json: TEMPLATE = VSCODE_THEME
+vscode/%-color-theme.json: TEMPLATE = VSCODE_THEME
+
+# The theme is the first word of the file name, e.g. lightstar in
+# vscode/lightstar-color-theme.json.
+theme = $(firstword $(subst -, ,$(basename $(notdir $@))))
 
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
-	@printf '%s\n' "$$$(TEMPLATE)" | awk "$$RENDER_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@printf '%s\n' "$$$(TEMPLATE)" | PALETTE="$$PALETTE_$(theme)" awk "$$RENDER_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
+# OpenCode themes hold a light and a dark mode in one file, so this one
+# combines Darkstar's palette as the dark mode and Lightstar's as the light.
+opencode/darkstar.json: makefile
+	@mkdir -p $(@D)
+	@{ printf '%s\n' "$$OPENCODE"; \
+		printf '%s\n' "$$OPENCODE_MODE" | PALETTE="$$PALETTE_darkstar" awk "$$RENDER_AWK" && echo ','; \
+		printf '%s\n' "$$OPENCODE_MODE" | PALETTE="$$PALETTE_lightstar" awk "$$RENDER_AWK" && echo '}'; \
+	} > $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv $@.tmp $@
 	@echo "  $@"
 
 check:
-	@awk -v strict=1 "$$CHECK_AWK"
+	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=1 "$$CHECK_AWK" || exit 1; done
 
 palette:
-	@awk -v strict=0 "$$CHECK_AWK"
+	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=0 "$$CHECK_AWK"; done
+
+VSCODE_EXTENSION := ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0
 
 install: all
-	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes ~/.config/zed/themes ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0
-	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
-	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
-	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
-	install -m 644 nvim/colors/darkstar.lua ~/.config/nvim/colors/darkstar.lua
+	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes ~/.config/zed/themes $(VSCODE_EXTENSION)
+	for t in $(THEMES); do \
+		install -m 644 ghostty/$$t.toml ~/.config/ghostty/themes/$$t.toml && \
+		install -m 644 helix/$$t.toml ~/.config/helix/themes/$$t.toml && \
+		install -m 644 lazygit/$$t.yml ~/.config/lazygit/$$t.yml && \
+		install -m 644 nvim/colors/$$t.lua ~/.config/nvim/colors/$$t.lua && \
+		install -m 644 zellij/$$t.kdl ~/.config/zellij/themes/$$t.kdl && \
+		install -m 644 zed/$$t.json ~/.config/zed/themes/$$t.json && \
+		install -m 644 vscode/$$t-color-theme.json $(VSCODE_EXTENSION)/$$t-color-theme.json || exit 1; \
+	done
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
-	install -m 644 zellij/darkstar.kdl ~/.config/zellij/themes/darkstar.kdl
-	install -m 644 zed/darkstar.json ~/.config/zed/themes/darkstar.json
-	install -m 644 vscode/package.json ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0/package.json
-	install -m 644 vscode/darkstar-color-theme.json ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0/darkstar-color-theme.json
+	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS)
+	rm -f $(OUTPUTS) opencode/darkstar.json
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -70,72 +90,80 @@ repo: makefile
 	@sh -c "$$FIXTURE_SH"
 	@echo "  $@"
 
-SCREENSHOTS := \
-	screenshots/ghostty.png \
-	screenshots/helix.png \
-	screenshots/lazygit.png \
-	screenshots/nvim.png \
-	screenshots/opencode.png \
-	screenshots/zellij.png
+# Screenshots go in screenshots/<theme>/<app>.png.
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode,screenshots/$(t)/$(a).png))
 
-screenshots: $(SCREENSHOTS) screenshots/zed.png screenshots/vscode.png
+screenshots: $(SCREENSHOTS)
 
 # Every screenshot uses the same window size, in columns and rows.
 SIZE := 110 32
 
-screenshots/ghostty.png: SCENE = GHOSTTY_SCENE
-screenshots/ghostty.png: TITLE = Ghostty
-screenshots/ghostty.png: WAIT = 1
-screenshots/ghostty.png: ghostty/darkstar.toml
+define terminal_screenshot
+@mkdir -p $(@D)
+@THEME=$* sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
+@echo "  $@"
+endef
 
-screenshots/helix.png: SCENE = HELIX_SCENE
-screenshots/helix.png: TITLE = Helix
-screenshots/helix.png: WAIT = 2
-screenshots/helix.png: ghostty/darkstar.toml helix/darkstar.toml repo
+screenshots/%/ghostty.png: SCENE = GHOSTTY_SCENE
+screenshots/%/ghostty.png: TITLE = Ghostty
+screenshots/%/ghostty.png: WAIT = 1
+screenshots/%/ghostty.png: ghostty/%.toml makefile
+	$(terminal_screenshot)
 
-screenshots/lazygit.png: SCENE = LAZYGIT_SCENE
-screenshots/lazygit.png: TITLE = Lazygit
-screenshots/lazygit.png: WAIT = 3
-screenshots/lazygit.png: ghostty/darkstar.toml lazygit/darkstar.yml repo
+screenshots/%/helix.png: SCENE = HELIX_SCENE
+screenshots/%/helix.png: TITLE = Helix
+screenshots/%/helix.png: WAIT = 2
+screenshots/%/helix.png: ghostty/%.toml helix/%.toml repo makefile
+	$(terminal_screenshot)
 
-screenshots/nvim.png: SCENE = NVIM_SCENE
-screenshots/nvim.png: TITLE = Neovim
-screenshots/nvim.png: WAIT = 2
-screenshots/nvim.png: ghostty/darkstar.toml nvim/colors/darkstar.lua repo
+screenshots/%/lazygit.png: SCENE = LAZYGIT_SCENE
+screenshots/%/lazygit.png: TITLE = Lazygit
+screenshots/%/lazygit.png: WAIT = 3
+screenshots/%/lazygit.png: ghostty/%.toml lazygit/%.yml repo makefile
+	$(terminal_screenshot)
 
-screenshots/opencode.png: SCENE = OPENCODE_SCENE
-screenshots/opencode.png: TITLE = opencode
-screenshots/opencode.png: WAIT = 5
-screenshots/opencode.png: ghostty/darkstar.toml opencode/darkstar.json repo
+screenshots/%/nvim.png: SCENE = NVIM_SCENE
+screenshots/%/nvim.png: TITLE = Neovim
+screenshots/%/nvim.png: WAIT = 2
+screenshots/%/nvim.png: ghostty/%.toml nvim/colors/%.lua repo makefile
+	$(terminal_screenshot)
 
-screenshots/zellij.png: SCENE = ZELLIJ_SCENE
-screenshots/zellij.png: TITLE = Zellij
-screenshots/zellij.png: WAIT = 3
-screenshots/zellij.png: ghostty/darkstar.toml zellij/darkstar.kdl repo
+screenshots/%/opencode.png: SCENE = OPENCODE_SCENE
+screenshots/%/opencode.png: TITLE = opencode
+screenshots/%/opencode.png: WAIT = 5
+screenshots/%/opencode.png: ghostty/%.toml opencode/darkstar.json repo makefile
+	$(terminal_screenshot)
 
-$(SCREENSHOTS): makefile
-	@mkdir -p $(@D)
-	@sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
-	@echo "  $@"
+screenshots/%/zellij.png: SCENE = ZELLIJ_SCENE
+screenshots/%/zellij.png: TITLE = Zellij
+screenshots/%/zellij.png: WAIT = 3
+screenshots/%/zellij.png: ghostty/%.toml zellij/%.kdl repo makefile
+	$(terminal_screenshot)
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
 # Ghostty windows above.
-screenshots/zed.png: zed/darkstar.json repo makefile
+screenshots/%/zed.png: zed/%.json repo makefile
 	@mkdir -p $(@D)
-	@sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
+	@THEME=$* sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/vscode.png: vscode/package.json vscode/darkstar-color-theme.json repo makefile
+screenshots/%/vscode.png: vscode/package.json vscode/%-color-theme.json repo makefile
 	@mkdir -p $(@D)
-	@sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
+	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
 .PHONY: all check palette install clean screenshots
 
 # Name, hex value and the minimum contrast ratio against the background.
 # 4.5 is WCAG AA and 7 is WCAG AAA. A dash means the colour isn't used for
-# text, so there's nothing to check.
-define palette
+# text, so there's nothing to check. The first few rows aren't colours:
+# they're the theme's file name, display name and dark or light, for the
+# templates to use. The last few rows are roles that name another colour,
+# so each theme can choose what its functions and warnings look like.
+define darkstar_palette
+name                  darkstar  -
+title                 Darkstar  -
+appearance            dark      -
 background            #05181d  -
 foreground            #eee8d5  7
 black                 #6c838b  4.5
@@ -156,6 +184,9 @@ bright_magenta        #ff81ca  7
 bright_cyan           #56d8c9  7
 bright_white          #fbf0cc  7
 bright_orange         #ed8649  7
+emphasis              bright_yellow  -
+caution               bright_yellow  -
+caution_dim           yellow   -
 cursor_color          #839496  -
 cursor_text           #002b36  -
 selection_background  #002b36  -
@@ -167,6 +198,78 @@ background_two        #0b1f23  -
 linenr                #475b62  -
 surface               #163a44  -
 surface_low           #08191e  -
+raised                background_two  -
+raised_high           surface  -
+raised_max            selection_primary  -
+extreme               #ffffff  -
+endef
+
+# Lightstar is Darkstar for light backgrounds.
+#
+# The background is a white with the faintest cool tint, and the foreground
+# has the same contrast against it as Darkstar's foreground. The UI greys
+# share the background's tint.
+#
+# Each accent is as saturated as its hue allows while reaching exactly
+# 4.5 (AA), or 7 (AAA) for the bright variants. Mirroring Darkstar's
+# higher ratios made them too dark: on a light background, high contrast
+# only leaves room for colours close to black. That's also why bright
+# colours are darker here rather than lighter.
+#
+# Most accents keep their Solarized hue, but two are shifted. At Solarized's
+# hues, blue turns a dull navy and green turns olive when darkened, so blue
+# moves towards true blue and green towards true green.
+#
+# Readable yellow text can only be brown on a light background, so Lightstar
+# avoids yellow text altogether. Its emphasis role, used for functions and
+# the like, is cyan, and its caution roles are orange. Yellow itself is only
+# for programs that print terminal colour 3.
+#
+# The raised rows are chosen by eye. The same contrast step looks bigger
+# on a light background than on a dark one, so they sit much closer to the
+# background than Darkstar's do.
+define lightstar_palette
+name                  lightstar  -
+title                 Lightstar  -
+appearance            light      -
+background            #fcfcff  -
+foreground            #262626  7
+black                 #617880  4.5
+red                   #ea031a  4.5
+green                 #058824  4.5
+yellow                #996d04  4.5
+blue                  #006bff  4.5
+magenta               #e10584  4.5
+cyan                  #00837b  4.5
+white                 #262626  7
+orange                #da3701  4.5
+bright_black          #445a62  7
+bright_red            #b30111  7
+bright_green          #006618  7
+bright_yellow         #745104  7
+bright_blue           #0150c2  7
+bright_magenta        #ab0263  7
+bright_cyan           #09625c  7
+bright_white          #000000  7
+bright_orange         #a62801  7
+emphasis              cyan           -
+caution               bright_orange  -
+caution_dim           orange         -
+cursor_color          #646467  -
+cursor_text           #e6e6e9  -
+selection_background  #e6e6e9  -
+selection_foreground  #262626  -
+cursorline            #ebf6f4  -
+very_dark             #bababd  -
+selection_primary     #bababc  -
+background_two        #f4f4f8  -
+linenr                #a0a0a3  -
+surface               #d1d1d4  -
+surface_low           #ffffff  -
+raised                #ffffff  -
+raised_high           cursorline  -
+raised_max            #e9e9ec  -
+extreme               #000000  -
 endef
 
 define common_awk
@@ -187,6 +290,7 @@ endef
 define render_awk
 function colour(name) {
   if (name ~ /^#/) return name
+  if (hexes[name] in hexes) return colour(hexes[name])
   if (!(name in hexes)) {
     printf "line %d: unknown colour '%s'\n", NR, name > "/dev/stderr"
     failed = 1
@@ -312,21 +416,21 @@ define newline
 endef
 
 define helix
-"attribute" = "bright_yellow"
+"attribute" = "emphasis"
 "type" = "bright_blue"
 "type.parameter" = "bright_magenta"
-"type.enum.variant" = "bright_yellow"
-"constructor" = "bright_yellow"
+"type.enum.variant" = "emphasis"
+"constructor" = "emphasis"
 "constant" = "bright_magenta"
 "constant.builtin" = "bright_magenta"
-"constant.builtin.boolean" = "bright_yellow"
+"constant.builtin.boolean" = "emphasis"
 "constant.numeric" = "bright_blue"
-"constant.character" = "bright_yellow"
+"constant.character" = "emphasis"
 "string" = "bright_green"
-"string.regexp" = "bright_yellow"
-"string.special" = "bright_yellow"
+"string.regexp" = "emphasis"
+"string.special" = "emphasis"
 "comment" = { fg = "black", modifiers = ["italic"] }
-"comment.block.documentation" = { fg = "bright_yellow", modifiers = ["italic"] }
+"comment.block.documentation" = { fg = "emphasis", modifiers = ["italic"] }
 "variable" = "white"
 "variable.builtin" = "bright_red"
 "label" = "magenta"
@@ -334,7 +438,7 @@ define helix
 "keyword" = "bright_red"
 "keyword.directive" = "bright_orange"
 "operator" = "white"
-"function" = "bright_yellow"
+"function" = "emphasis"
 "function.macro" = "bright_orange"
 "function.builtin" = "magenta"
 "tag" = "bright_magenta"
@@ -343,11 +447,11 @@ define helix
 "namespace.mod_type" = "magenta"
 "markup.heading" = "bright_green"
 "markup.list" = "bright_red"
-"markup.bold" = { fg = "bright_yellow", modifiers = ["bold"] }
-"markup.italic" = { fg = "bright_yellow", modifiers = ["italic"] }
+"markup.bold" = { fg = "emphasis", modifiers = ["bold"] }
+"markup.italic" = { fg = "emphasis", modifiers = ["italic"] }
 "markup.strikethrough" = { modifiers = ["crossed_out"] }
 "markup.link.url" = "bright_blue"
-"markup.link.text" = "bright_yellow"
+"markup.link.text" = "emphasis"
 "markup.link.label" = "bright_magenta"
 "markup.raw" = "bright_magenta"
 "markup.quote" = "bright_green"
@@ -356,13 +460,13 @@ define helix
 "diff.delta" = "bright_yellow"
 "special" = "bright_orange"
 
-"warning" = "bright_yellow"
+"warning" = "caution"
 "error" = { fg = "bright_red", modifiers = ["bold"] }
 "info" = { fg = "bright_blue", modifiers = ["bold"] }
 "hint" = { fg = "bright_green", modifiers = ["bold"] }
 "diagnostic.hint" = { underline = { color = "bright_green", style = "curl" } }
 "diagnostic.info" = { underline = { color = "bright_blue", style = "curl" } }
-"diagnostic.warning" = { underline = { color = "bright_yellow", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "caution", style = "curl" } }
 "diagnostic.error" = { underline = { color = "bright_red", style = "curl" } }
 
 "diagnostic.deprecated" = { modifiers = ["crossed_out"] }
@@ -420,6 +524,9 @@ bright_cyan = "{{bright_cyan}}"
 bright_white = "{{bright_white}}"
 orange = "{{orange}}"
 bright_orange = "{{bright_orange}}"
+emphasis = "{{emphasis}}"
+caution = "{{caution}}"
+caution_dim = "{{caution_dim}}"
 cursor_color = "{{cursor_color}}"
 cursor_text = "{{cursor_text}}"
 selection_background = "{{selection_background}}"
@@ -578,12 +685,13 @@ dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 
 cat > "$dir/config" <<EOF
-theme = $PWD/ghostty/darkstar.toml
+theme = $PWD/ghostty/$THEME.toml
 title = $title
 window-width = $cols
 window-height = $rows
 window-padding-x = 12
 window-padding-y = 10
+font-family = Lilex
 font-size = 14
 cursor-style-blink = false
 shell-integration = none
@@ -596,7 +704,7 @@ EOF
 {
   printf '#!/bin/sh\n'
   printf 'export PATH=%s\n' "'$PATH'"
-  printf 'export DARKSTAR=%s SCENE_DIR=%s\n' "'$PWD'" "'$dir'"
+  printf 'export DARKSTAR=%s SCENE_DIR=%s THEME=%s\n' "'$PWD'" "'$dir'" "'$THEME'"
   [ -n "$HELIX_RUNTIME" ] && printf 'export HELIX_RUNTIME=%s\n' "'$HELIX_RUNTIME'"
   printf 'printf "\\033[H\\033[2J"\n'
   printf '%s\n' "$scene"
@@ -655,8 +763,8 @@ endef
 
 define helix_scene
 mkdir -p "$SCENE_DIR/xdg/helix/themes"
-cp "$DARKSTAR/helix/darkstar.toml" "$SCENE_DIR/xdg/helix/themes/"
-printf 'theme = "darkstar"\n' > "$SCENE_DIR/xdg/helix/config.toml"
+cp "$DARKSTAR/helix/$THEME.toml" "$SCENE_DIR/xdg/helix/themes/"
+printf 'theme = "%s"\n' "$THEME" > "$SCENE_DIR/xdg/helix/config.toml"
 export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_CACHE_HOME="$SCENE_DIR/cache"
 cd "$DARKSTAR/repo"
 exec hx src/cart.ts:24
@@ -677,7 +785,7 @@ EOF
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 cd "$DARKSTAR/repo"
 exec lazygit -ucd "$SCENE_DIR/lazygit" \
-  -ucf "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/darkstar.yml"
+  -ucf "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/$THEME.yml"
 endef
 
 define opencode
@@ -694,7 +802,7 @@ define opencode
       "cyan"
     ],
     "text": {
-      "base": "{{foreground}}",
+      "base": "$hue.neutral.200",
       "muted": "$hue.neutral.300",
       "action": {
         "primary": {
@@ -776,6 +884,179 @@ define opencode
       }
     },
     "border": {
+      "base": "$hue.neutral.500"
+    },
+    "scrollbar": {
+      "base": "$hue.neutral.400"
+    },
+    "diff": {
+      "text": {
+        "added": "$hue.green.400",
+        "removed": "$hue.red.400",
+        "context": "$hue.neutral.300",
+        "hunkHeader": "$hue.neutral.300"
+      },
+      "background": {
+        "added": "$hue.green.700",
+        "removed": "$hue.red.700",
+        "context": "$hue.neutral.700"
+      },
+      "highlight": {
+        "added": "$hue.green.400",
+        "removed": "$hue.red.400"
+      },
+      "lineNumber": {
+        "text": "$hue.neutral.400",
+        "background": {
+          "added": "$hue.green.800",
+          "removed": "$hue.red.800"
+        }
+      }
+    },
+    "syntax": {
+      "comment": "$hue.neutral.300",
+      "keyword": "$hue.red.400",
+      "function": "$hue.yellow.400",
+      "variable": "$hue.neutral.200",
+      "string": "$hue.green.400",
+      "number": "$hue.blue.400",
+      "type": "$hue.blue.400",
+      "operator": "$hue.neutral.200",
+      "punctuation": "$hue.neutral.200"
+    },
+    "markdown": {
+      "text": "$hue.neutral.200",
+      "heading": "$hue.green.400",
+      "link": "$hue.blue.400",
+      "linkText": "$hue.yellow.400",
+      "code": "$hue.cyan.400",
+      "blockQuote": "$hue.green.400",
+      "emphasis": "$hue.yellow.400",
+      "strong": "$hue.yellow.400",
+      "horizontalRule": "$hue.neutral.300",
+      "listItem": "$hue.red.400",
+      "listEnumeration": "$hue.red.400",
+      "image": "$hue.blue.400",
+      "imageText": "$hue.yellow.400",
+      "codeBlock": "$hue.neutral.200"
+    },
+    "@dialog": {
+      "background": {
+        "base": "$background.raised.base",
+        "action": {
+          "primary": {
+            "$hovered": "$background.raised.max"
+          },
+          "secondary": {
+            "$hovered": "$background.raised.max"
+          }
+        }
+      },
+      "@footer": {
+        "text": {
+          "muted": "$hue.neutral.200"
+        }
+      }
+    }
+  },
+endef
+
+define opencode_mode
+  "{{appearance}}": {
+    "hue": {
+      "red": {
+        "100": "{{mix bright_red extreme 0.6}}",
+        "200": "{{mix bright_red extreme 0.3}}",
+        "300": "{{mix bright_red extreme 0.12}}",
+        "400": "{{bright_red}}",
+        "500": "{{red}}",
+        "600": "{{mix red background 0.6}}",
+        "700": "{{mix red background 0.78}}",
+        "800": "{{mix red background 0.88}}",
+        "900": "{{mix red background 0.95}}"
+      },
+      "orange": {
+        "100": "{{mix bright_orange extreme 0.6}}",
+        "200": "{{mix bright_orange extreme 0.3}}",
+        "300": "{{mix bright_orange extreme 0.12}}",
+        "400": "{{bright_orange}}",
+        "500": "{{orange}}",
+        "600": "{{mix orange background 0.6}}",
+        "700": "{{mix orange background 0.78}}",
+        "800": "{{mix orange background 0.88}}",
+        "900": "{{mix orange background 0.95}}"
+      },
+      "yellow": {
+        "100": "{{mix caution extreme 0.6}}",
+        "200": "{{mix caution extreme 0.3}}",
+        "300": "{{mix caution extreme 0.12}}",
+        "400": "{{caution}}",
+        "500": "{{caution_dim}}",
+        "600": "{{mix caution_dim background 0.6}}",
+        "700": "{{mix caution_dim background 0.78}}",
+        "800": "{{mix caution_dim background 0.88}}",
+        "900": "{{mix caution_dim background 0.95}}"
+      },
+      "green": {
+        "100": "{{mix bright_green extreme 0.6}}",
+        "200": "{{mix bright_green extreme 0.3}}",
+        "300": "{{mix bright_green extreme 0.12}}",
+        "400": "{{bright_green}}",
+        "500": "{{green}}",
+        "600": "{{mix green background 0.6}}",
+        "700": "{{mix green background 0.78}}",
+        "800": "{{mix green background 0.88}}",
+        "900": "{{mix green background 0.95}}"
+      },
+      "cyan": {
+        "100": "{{mix bright_cyan extreme 0.6}}",
+        "200": "{{mix bright_cyan extreme 0.3}}",
+        "300": "{{mix bright_cyan extreme 0.12}}",
+        "400": "{{bright_cyan}}",
+        "500": "{{cyan}}",
+        "600": "{{mix cyan background 0.6}}",
+        "700": "{{mix cyan background 0.78}}",
+        "800": "{{mix cyan background 0.88}}",
+        "900": "{{mix cyan background 0.95}}"
+      },
+      "blue": {
+        "100": "{{mix bright_blue extreme 0.6}}",
+        "200": "{{mix bright_blue extreme 0.3}}",
+        "300": "{{mix bright_blue extreme 0.12}}",
+        "400": "{{bright_blue}}",
+        "500": "{{blue}}",
+        "600": "{{mix blue background 0.6}}",
+        "700": "{{mix blue background 0.78}}",
+        "800": "{{mix blue background 0.88}}",
+        "900": "{{mix blue background 0.95}}"
+      },
+      "purple": {
+        "100": "{{mix bright_magenta extreme 0.6}}",
+        "200": "{{mix bright_magenta extreme 0.3}}",
+        "300": "{{mix bright_magenta extreme 0.12}}",
+        "400": "{{bright_magenta}}",
+        "500": "{{magenta}}",
+        "600": "{{mix magenta background 0.6}}",
+        "700": "{{mix magenta background 0.78}}",
+        "800": "{{mix magenta background 0.88}}",
+        "900": "{{mix magenta background 0.95}}"
+      },
+      "gray": {
+        "100": "{{bright_white}}",
+        "200": "{{foreground}}",
+        "300": "{{bright_black}}",
+        "400": "{{linenr}}",
+        "500": "{{raised_max}}",
+        "600": "{{raised_high}}",
+        "700": "{{raised}}",
+        "800": "{{surface_low}}",
+        "900": "{{background}}"
+      },
+      "accent": "$hue.blue",
+      "interactive": "$hue.blue",
+      "neutral": "$hue.gray"
+    },
+    "border": {
       "base": "{{very_dark}}"
     },
     "scrollbar": {
@@ -808,7 +1089,7 @@ define opencode
     "syntax": {
       "comment": "{{black}}",
       "keyword": "{{bright_red}}",
-      "function": "{{bright_yellow}}",
+      "function": "{{emphasis}}",
       "variable": "{{foreground}}",
       "string": "{{bright_green}}",
       "number": "{{bright_blue}}",
@@ -820,142 +1101,30 @@ define opencode
       "text": "{{foreground}}",
       "heading": "{{bright_green}}",
       "link": "{{bright_blue}}",
-      "linkText": "{{bright_yellow}}",
+      "linkText": "{{emphasis}}",
       "code": "{{bright_cyan}}",
       "blockQuote": "{{bright_green}}",
-      "emphasis": "{{bright_yellow}}",
-      "strong": "{{bright_yellow}}",
+      "emphasis": "{{emphasis}}",
+      "strong": "{{emphasis}}",
       "horizontalRule": "{{black}}",
       "listItem": "{{bright_red}}",
       "listEnumeration": "{{bright_red}}",
       "image": "{{bright_blue}}",
-      "imageText": "{{bright_yellow}}",
+      "imageText": "{{emphasis}}",
       "codeBlock": "{{foreground}}"
-    },
-    "@dialog": {
-      "background": {
-        "base": "$background.raised.base",
-        "action": {
-          "primary": {
-            "$hovered": "$background.raised.max"
-          },
-          "secondary": {
-            "$hovered": "$background.raised.max"
-          }
-        }
-      },
-      "@footer": {
-        "text": {
-          "muted": "$hue.neutral.200"
-        }
-      }
-    }
-  },
-  "dark": {
-    "hue": {
-      "red": {
-        "100": "{{mix bright_red #ffffff 0.6}}",
-        "200": "{{mix bright_red #ffffff 0.3}}",
-        "300": "{{mix bright_red #ffffff 0.12}}",
-        "400": "{{bright_red}}",
-        "500": "{{red}}",
-        "600": "{{mix red background 0.6}}",
-        "700": "{{mix red background 0.78}}",
-        "800": "{{mix red background 0.88}}",
-        "900": "{{mix red background 0.95}}"
-      },
-      "orange": {
-        "100": "{{mix bright_orange #ffffff 0.6}}",
-        "200": "{{mix bright_orange #ffffff 0.3}}",
-        "300": "{{mix bright_orange #ffffff 0.12}}",
-        "400": "{{bright_orange}}",
-        "500": "{{orange}}",
-        "600": "{{mix orange background 0.6}}",
-        "700": "{{mix orange background 0.78}}",
-        "800": "{{mix orange background 0.88}}",
-        "900": "{{mix orange background 0.95}}"
-      },
-      "yellow": {
-        "100": "{{mix bright_yellow #ffffff 0.6}}",
-        "200": "{{mix bright_yellow #ffffff 0.3}}",
-        "300": "{{mix bright_yellow #ffffff 0.12}}",
-        "400": "{{bright_yellow}}",
-        "500": "{{yellow}}",
-        "600": "{{mix yellow background 0.6}}",
-        "700": "{{mix yellow background 0.78}}",
-        "800": "{{mix yellow background 0.88}}",
-        "900": "{{mix yellow background 0.95}}"
-      },
-      "green": {
-        "100": "{{mix bright_green #ffffff 0.6}}",
-        "200": "{{mix bright_green #ffffff 0.3}}",
-        "300": "{{mix bright_green #ffffff 0.12}}",
-        "400": "{{bright_green}}",
-        "500": "{{green}}",
-        "600": "{{mix green background 0.6}}",
-        "700": "{{mix green background 0.78}}",
-        "800": "{{mix green background 0.88}}",
-        "900": "{{mix green background 0.95}}"
-      },
-      "cyan": {
-        "100": "{{mix bright_cyan #ffffff 0.6}}",
-        "200": "{{mix bright_cyan #ffffff 0.3}}",
-        "300": "{{mix bright_cyan #ffffff 0.12}}",
-        "400": "{{bright_cyan}}",
-        "500": "{{cyan}}",
-        "600": "{{mix cyan background 0.6}}",
-        "700": "{{mix cyan background 0.78}}",
-        "800": "{{mix cyan background 0.88}}",
-        "900": "{{mix cyan background 0.95}}"
-      },
-      "blue": {
-        "100": "{{mix bright_blue #ffffff 0.6}}",
-        "200": "{{mix bright_blue #ffffff 0.3}}",
-        "300": "{{mix bright_blue #ffffff 0.12}}",
-        "400": "{{bright_blue}}",
-        "500": "{{blue}}",
-        "600": "{{mix blue background 0.6}}",
-        "700": "{{mix blue background 0.78}}",
-        "800": "{{mix blue background 0.88}}",
-        "900": "{{mix blue background 0.95}}"
-      },
-      "purple": {
-        "100": "{{mix bright_magenta #ffffff 0.6}}",
-        "200": "{{mix bright_magenta #ffffff 0.3}}",
-        "300": "{{mix bright_magenta #ffffff 0.12}}",
-        "400": "{{bright_magenta}}",
-        "500": "{{magenta}}",
-        "600": "{{mix magenta background 0.6}}",
-        "700": "{{mix magenta background 0.78}}",
-        "800": "{{mix magenta background 0.88}}",
-        "900": "{{mix magenta background 0.95}}"
-      },
-      "gray": {
-        "100": "{{bright_white}}",
-        "200": "{{foreground}}",
-        "300": "{{bright_black}}",
-        "400": "{{linenr}}",
-        "500": "{{selection_primary}}",
-        "600": "{{surface}}",
-        "700": "{{background_two}}",
-        "800": "{{surface_low}}",
-        "900": "{{background}}"
-      },
-      "accent": "$hue.blue",
-      "interactive": "$hue.blue",
-      "neutral": "$hue.gray"
     }
   }
-}
 endef
 
 
 define opencode_scene
 mkdir -p "$SCENE_DIR/xdg/opencode/themes"
 cp "$DARKSTAR/opencode/darkstar.json" "$SCENE_DIR/xdg/opencode/themes/"
-cat > "$SCENE_DIR/xdg/opencode/cli.json" <<'JSON'
+mode=dark
+[ "$THEME" = lightstar ] && mode=light
+cat > "$SCENE_DIR/xdg/opencode/cli.json" <<JSON
 {
-  "theme": { "name": "darkstar" },
+  "theme": { "name": "darkstar", "mode": "$mode" },
   "animations": false
 }
 JSON
@@ -968,15 +1137,15 @@ endef
 
 
 define nvim
--- Darkstar for Neovim: https://github.com/henrycatalinismith/darkstar
+-- {{title}} for Neovim: https://github.com/henrycatalinismith/darkstar
 -- Generated by the Darkstar makefile. Edit the makefile, not this file.
 
 vim.cmd("highlight clear")
 if vim.fn.exists("syntax_on") == 1 then
   vim.cmd("syntax reset")
 end
-vim.o.background = "dark"
-vim.g.colors_name = "darkstar"
+vim.o.background = "{{appearance}}"
+vim.g.colors_name = "{{name}}"
 
 local c = {
   background = "{{background}}",
@@ -999,6 +1168,9 @@ local c = {
   bright_cyan = "{{bright_cyan}}",
   bright_white = "{{bright_white}}",
   bright_orange = "{{bright_orange}}",
+  emphasis = "{{emphasis}}",
+  caution = "{{caution}}",
+  caution_dim = "{{caution_dim}}",
   cursorline = "{{cursorline}}",
   very_dark = "{{very_dark}}",
   selection = "{{selection_primary}}",
@@ -1007,8 +1179,8 @@ local c = {
   surface = "{{surface}}",
   diff_add = "{{mix green background 0.82}}",
   diff_delete = "{{mix red background 0.82}}",
-  diff_change = "{{mix yellow background 0.88}}",
-  diff_text = "{{mix yellow background 0.7}}",
+  diff_change = "{{mix caution_dim background 0.88}}",
+  diff_text = "{{mix caution_dim background 0.7}}",
 }
 
 local groups = {
@@ -1034,8 +1206,8 @@ local groups = {
   Folded = { fg = c.bright_black, bg = c.background_two },
   Visual = { bg = c.selection },
   VisualNOS = { link = "Visual" },
-  Search = { fg = c.background, bg = c.yellow },
-  IncSearch = { fg = c.background, bg = c.bright_yellow },
+  Search = { fg = c.background, bg = c.caution_dim },
+  IncSearch = { fg = c.background, bg = c.caution },
   CurSearch = { link = "IncSearch" },
   Substitute = { fg = c.background, bg = c.bright_orange },
   MatchParen = { bg = c.background_two, bold = true },
@@ -1067,10 +1239,10 @@ local groups = {
   MoreMsg = { fg = c.bright_green },
   ModeMsg = { fg = c.foreground, bold = true },
   MsgArea = { fg = c.foreground },
-  WarningMsg = { fg = c.bright_yellow },
+  WarningMsg = { fg = c.caution },
   ErrorMsg = { fg = c.bright_red, bold = true },
   SpellBad = { undercurl = true, sp = c.bright_red },
-  SpellCap = { undercurl = true, sp = c.bright_yellow },
+  SpellCap = { undercurl = true, sp = c.caution },
   SpellRare = { undercurl = true, sp = c.bright_magenta },
   SpellLocal = { undercurl = true, sp = c.bright_cyan },
 
@@ -1081,22 +1253,22 @@ local groups = {
   DiffText = { bg = c.diff_text },
   Added = { fg = c.bright_green },
   Removed = { fg = c.bright_red },
-  Changed = { fg = c.bright_yellow },
+  Changed = { fg = c.caution },
   diffAdded = { link = "Added" },
   diffRemoved = { link = "Removed" },
   diffChanged = { link = "Changed" },
 
   -- Syntax
   Comment = { fg = c.black, italic = true },
-  SpecialComment = { fg = c.bright_yellow, italic = true },
+  SpecialComment = { fg = c.emphasis, italic = true },
   Constant = { fg = c.bright_magenta },
   String = { fg = c.bright_green },
-  Character = { fg = c.bright_yellow },
+  Character = { fg = c.emphasis },
   Number = { fg = c.bright_blue },
   Float = { fg = c.bright_blue },
-  Boolean = { fg = c.bright_yellow },
+  Boolean = { fg = c.emphasis },
   Identifier = { fg = c.foreground },
-  Function = { fg = c.bright_yellow },
+  Function = { fg = c.emphasis },
   Statement = { fg = c.bright_red },
   Conditional = { fg = c.bright_red },
   Repeat = { fg = c.bright_red },
@@ -1114,14 +1286,14 @@ local groups = {
   Structure = { fg = c.bright_blue },
   Typedef = { fg = c.bright_blue },
   Special = { fg = c.bright_orange },
-  SpecialChar = { fg = c.bright_yellow },
+  SpecialChar = { fg = c.emphasis },
   Tag = { fg = c.bright_magenta },
   Delimiter = { fg = c.foreground },
   Debug = { fg = c.bright_orange },
   Underlined = { underline = true },
   Ignore = { fg = c.bright_black },
   Error = { fg = c.bright_red, bold = true },
-  Todo = { fg = c.bright_yellow, bold = true },
+  Todo = { fg = c.caution, bold = true },
 
   -- Tree-sitter
   ["@variable"] = { fg = c.foreground },
@@ -1135,25 +1307,25 @@ local groups = {
   ["@module"] = { fg = c.foreground },
   ["@label"] = { fg = c.magenta },
   ["@string"] = { fg = c.bright_green },
-  ["@string.regexp"] = { fg = c.bright_yellow },
-  ["@string.escape"] = { fg = c.bright_yellow },
-  ["@string.special"] = { fg = c.bright_yellow },
+  ["@string.regexp"] = { fg = c.emphasis },
+  ["@string.escape"] = { fg = c.emphasis },
+  ["@string.special"] = { fg = c.emphasis },
   ["@string.special.url"] = { fg = c.bright_blue, underline = true },
-  ["@character"] = { fg = c.bright_yellow },
-  ["@boolean"] = { fg = c.bright_yellow },
+  ["@character"] = { fg = c.emphasis },
+  ["@boolean"] = { fg = c.emphasis },
   ["@number"] = { fg = c.bright_blue },
   ["@number.float"] = { fg = c.bright_blue },
   ["@type"] = { fg = c.bright_blue },
   ["@type.builtin"] = { fg = c.bright_blue },
   ["@type.definition"] = { fg = c.bright_blue },
-  ["@attribute"] = { fg = c.bright_yellow },
-  ["@function"] = { fg = c.bright_yellow },
+  ["@attribute"] = { fg = c.emphasis },
+  ["@function"] = { fg = c.emphasis },
   ["@function.builtin"] = { fg = c.magenta },
-  ["@function.call"] = { fg = c.bright_yellow },
+  ["@function.call"] = { fg = c.emphasis },
   ["@function.macro"] = { fg = c.bright_orange },
-  ["@function.method"] = { fg = c.bright_yellow },
-  ["@function.method.call"] = { fg = c.bright_yellow },
-  ["@constructor"] = { fg = c.bright_yellow },
+  ["@function.method"] = { fg = c.emphasis },
+  ["@function.method.call"] = { fg = c.emphasis },
+  ["@constructor"] = { fg = c.emphasis },
   ["@operator"] = { fg = c.foreground },
   ["@keyword"] = { fg = c.bright_red },
   ["@keyword.directive"] = { fg = c.bright_orange },
@@ -1164,18 +1336,18 @@ local groups = {
   ["@comment"] = { link = "Comment" },
   ["@comment.documentation"] = { link = "Comment" },
   ["@comment.error"] = { fg = c.bright_red, bold = true },
-  ["@comment.warning"] = { fg = c.bright_yellow, bold = true },
+  ["@comment.warning"] = { fg = c.caution, bold = true },
   ["@comment.todo"] = { link = "Todo" },
   ["@comment.note"] = { fg = c.bright_blue, bold = true },
   ["@tag"] = { fg = c.bright_magenta },
-  ["@tag.attribute"] = { fg = c.bright_yellow },
+  ["@tag.attribute"] = { fg = c.emphasis },
   ["@tag.delimiter"] = { fg = c.foreground },
   ["@markup.heading"] = { fg = c.bright_green, bold = true },
-  ["@markup.strong"] = { fg = c.bright_yellow, bold = true },
-  ["@markup.italic"] = { fg = c.bright_yellow, italic = true },
+  ["@markup.strong"] = { fg = c.emphasis, bold = true },
+  ["@markup.italic"] = { fg = c.emphasis, italic = true },
   ["@markup.strikethrough"] = { strikethrough = true },
   ["@markup.underline"] = { underline = true },
-  ["@markup.link"] = { fg = c.bright_yellow },
+  ["@markup.link"] = { fg = c.emphasis },
   ["@markup.link.url"] = { fg = c.bright_blue, underline = true },
   ["@markup.link.label"] = { fg = c.bright_magenta },
   ["@markup.raw"] = { fg = c.bright_magenta },
@@ -1187,12 +1359,12 @@ local groups = {
 
   -- Diagnostics and LSP
   DiagnosticError = { fg = c.bright_red },
-  DiagnosticWarn = { fg = c.bright_yellow },
+  DiagnosticWarn = { fg = c.caution },
   DiagnosticInfo = { fg = c.bright_blue },
   DiagnosticHint = { fg = c.bright_green },
   DiagnosticOk = { fg = c.bright_green },
   DiagnosticUnderlineError = { undercurl = true, sp = c.bright_red },
-  DiagnosticUnderlineWarn = { undercurl = true, sp = c.bright_yellow },
+  DiagnosticUnderlineWarn = { undercurl = true, sp = c.caution },
   DiagnosticUnderlineInfo = { undercurl = true, sp = c.bright_blue },
   DiagnosticUnderlineHint = { undercurl = true, sp = c.bright_green },
   DiagnosticUnderlineOk = { undercurl = true, sp = c.bright_green },
@@ -1235,7 +1407,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pcall(vim.treesitter.start, args.buf)
   end,
 })
-vim.cmd.colorscheme("darkstar")
+vim.cmd.colorscheme(vim.env.THEME)
 LUA
 export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_STATE_HOME="$SCENE_DIR/state"
 cd "$DARKSTAR/repo"
@@ -1245,7 +1417,7 @@ endef
 
 define zellij
 themes {
-    darkstar {
+    {{name}} {
         text_unselected {
             base "{{foreground}}"
             background "{{background}}"
@@ -1353,7 +1525,7 @@ themes {
         exit_code_error {
             base "{{bright_red}}"
             background "{{background}}"
-            emphasis_0 "{{bright_yellow}}"
+            emphasis_0 "{{caution}}"
             emphasis_1 "{{background}}"
             emphasis_2 "{{background}}"
             emphasis_3 "{{background}}"
@@ -1362,7 +1534,7 @@ themes {
             player_1 "{{bright_magenta}}"
             player_2 "{{bright_blue}}"
             player_3 "{{bright_green}}"
-            player_4 "{{bright_yellow}}"
+            player_4 "{{caution}}"
             player_5 "{{bright_cyan}}"
             player_6 "{{bright_red}}"
             player_7 "{{bright_orange}}"
@@ -1376,9 +1548,9 @@ endef
 
 define zellij_scene
 mkdir -p "$SCENE_DIR/zellij/themes"
-cp "$DARKSTAR/zellij/darkstar.kdl" "$SCENE_DIR/zellij/themes/"
-cat > "$SCENE_DIR/zellij/config.kdl" <<'KDL'
-theme "darkstar"
+cp "$DARKSTAR/zellij/$THEME.kdl" "$SCENE_DIR/zellij/themes/"
+cat > "$SCENE_DIR/zellij/config.kdl" <<KDL
+theme "$THEME"
 show_startup_tips false
 show_release_notes false
 session_serialization false
@@ -1433,12 +1605,12 @@ endef
 define zed
 {
   "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
-  "name": "Darkstar",
+  "name": "{{title}}",
   "author": "Henry Catalini Smith",
   "themes": [
     {
-      "name": "Darkstar",
-      "appearance": "dark",
+      "name": "{{title}}",
+      "appearance": "{{appearance}}",
       "style": {
         "background": "{{background_two}}",
         "border": "{{very_dark}}",
@@ -1477,7 +1649,7 @@ define zed
         "tab_bar.background": "{{background_two}}",
         "tab.inactive_background": "{{background_two}}",
         "tab.active_background": "{{background}}",
-        "search.match_background": "{{yellow}}66",
+        "search.match_background": "{{caution_dim}}66",
         "panel.background": "{{background_two}}",
         "panel.focused_border": "{{blue}}",
         "pane.focused_border": "{{blue}}",
@@ -1542,43 +1714,43 @@ define zed
         "info": "{{bright_blue}}",
         "info.background": "{{mix blue background 0.82}}",
         "info.border": "{{blue}}",
-        "modified": "{{bright_yellow}}",
-        "modified.background": "{{mix yellow background 0.82}}",
-        "modified.border": "{{yellow}}",
+        "modified": "{{caution}}",
+        "modified.background": "{{mix caution_dim background 0.82}}",
+        "modified.border": "{{caution_dim}}",
         "predictive": "{{bright_black}}",
         "renamed": "{{bright_blue}}",
         "success": "{{bright_green}}",
         "success.background": "{{mix green background 0.82}}",
         "success.border": "{{green}}",
         "unreachable": "{{bright_black}}",
-        "warning": "{{bright_yellow}}",
-        "warning.background": "{{mix yellow background 0.82}}",
-        "warning.border": "{{yellow}}",
+        "warning": "{{caution}}",
+        "warning.background": "{{mix caution_dim background 0.82}}",
+        "warning.border": "{{caution_dim}}",
         "players": [
           { "cursor": "{{foreground}}", "background": "{{foreground}}", "selection": "{{selection_primary}}" },
           { "cursor": "{{bright_magenta}}", "background": "{{bright_magenta}}", "selection": "{{bright_magenta}}33" },
           { "cursor": "{{bright_green}}", "background": "{{bright_green}}", "selection": "{{bright_green}}33" },
           { "cursor": "{{bright_orange}}", "background": "{{bright_orange}}", "selection": "{{bright_orange}}33" },
           { "cursor": "{{bright_cyan}}", "background": "{{bright_cyan}}", "selection": "{{bright_cyan}}33" },
-          { "cursor": "{{bright_yellow}}", "background": "{{bright_yellow}}", "selection": "{{bright_yellow}}33" }
+          { "cursor": "{{caution}}", "background": "{{caution}}", "selection": "{{caution}}33" }
         ],
         "syntax": {
-          "attribute": { "color": "{{bright_yellow}}" },
-          "boolean": { "color": "{{bright_yellow}}" },
+          "attribute": { "color": "{{emphasis}}" },
+          "boolean": { "color": "{{emphasis}}" },
           "comment": { "color": "{{black}}", "font_style": "italic" },
           "comment.doc": { "color": "{{black}}", "font_style": "italic" },
           "constant": { "color": "{{bright_magenta}}" },
-          "constructor": { "color": "{{bright_yellow}}" },
+          "constructor": { "color": "{{emphasis}}" },
           "embedded": { "color": "{{foreground}}" },
-          "emphasis": { "color": "{{bright_yellow}}", "font_style": "italic" },
-          "emphasis.strong": { "color": "{{bright_yellow}}", "font_weight": 700 },
-          "enum": { "color": "{{bright_yellow}}" },
-          "function": { "color": "{{bright_yellow}}" },
+          "emphasis": { "color": "{{emphasis}}", "font_style": "italic" },
+          "emphasis.strong": { "color": "{{emphasis}}", "font_weight": 700 },
+          "enum": { "color": "{{emphasis}}" },
+          "function": { "color": "{{emphasis}}" },
           "function.builtin": { "color": "{{magenta}}" },
           "hint": { "color": "{{bright_black}}", "font_style": "italic" },
           "keyword": { "color": "{{bright_red}}" },
           "label": { "color": "{{magenta}}" },
-          "link_text": { "color": "{{bright_yellow}}" },
+          "link_text": { "color": "{{emphasis}}" },
           "link_uri": { "color": "{{bright_blue}}" },
           "number": { "color": "{{bright_blue}}" },
           "operator": { "color": "{{foreground}}" },
@@ -1592,17 +1764,17 @@ define zed
           "punctuation.list_marker": { "color": "{{bright_red}}" },
           "punctuation.special": { "color": "{{bright_orange}}" },
           "string": { "color": "{{bright_green}}" },
-          "string.escape": { "color": "{{bright_yellow}}" },
-          "string.regex": { "color": "{{bright_yellow}}" },
-          "string.special": { "color": "{{bright_yellow}}" },
-          "string.special.symbol": { "color": "{{bright_yellow}}" },
+          "string.escape": { "color": "{{emphasis}}" },
+          "string.regex": { "color": "{{emphasis}}" },
+          "string.special": { "color": "{{emphasis}}" },
+          "string.special.symbol": { "color": "{{emphasis}}" },
           "tag": { "color": "{{bright_magenta}}" },
           "text.literal": { "color": "{{bright_magenta}}" },
           "title": { "color": "{{bright_green}}", "font_weight": 700 },
           "type": { "color": "{{bright_blue}}" },
           "variable": { "color": "{{foreground}}" },
           "variable.special": { "color": "{{bright_red}}" },
-          "variant": { "color": "{{bright_yellow}}" }
+          "variant": { "color": "{{emphasis}}" }
         }
       }
     }
@@ -1619,15 +1791,16 @@ endef
 define zed_screenshot_sh
 set -e
 out="$PWD/$1"; width="$2"; height="$3"
+title=$(printf '%s' "$THEME" | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
 darkstar="$PWD"
 dir=$(mktemp -d /tmp/zed.XXXX)
 trap 'rm -rf "$dir"' EXIT
 
 mkdir -p "$dir/config/themes"
-cp "$darkstar/zed/darkstar.json" "$dir/config/themes/"
-cat > "$dir/config/settings.json" <<'JSON'
+cp "$darkstar/zed/$THEME.json" "$dir/config/themes/"
+cat > "$dir/config/settings.json" <<JSON
 {
-  "theme": { "mode": "dark", "dark": "Darkstar", "light": "Darkstar" },
+  "theme": { "mode": "system", "dark": "$title", "light": "$title" },
   "session": { "trust_all_worktrees": true },
   "auto_update": false,
   "telemetry": { "diagnostics": false, "metrics": false },
@@ -1638,7 +1811,10 @@ cat > "$dir/config/settings.json" <<'JSON'
   "agent": { "enabled": false, "button": false },
   "restore_on_startup": "none",
   "cursor_blink": false,
+  "ui_font_family": "Lilex",
   "ui_font_size": 15,
+  "buffer_font_family": "Lilex",
+  "terminal": { "font_family": "Lilex" },
   "buffer_font_size": 15
 }
 JSON
@@ -1695,6 +1871,11 @@ define vscode_package
         "label": "Darkstar",
         "uiTheme": "vs-dark",
         "path": "./darkstar-color-theme.json"
+      },
+      {
+        "label": "Lightstar",
+        "uiTheme": "vs",
+        "path": "./lightstar-color-theme.json"
       }
     ]
   }
@@ -1704,8 +1885,8 @@ endef
 define vscode_theme
 {
   "$schema": "vscode://schemas/color-theme",
-  "name": "Darkstar",
-  "type": "dark",
+  "name": "{{title}}",
+  "type": "{{appearance}}",
   "semanticHighlighting": true,
   "colors": {
     "foreground": "{{foreground}}",
@@ -1744,8 +1925,8 @@ define vscode_theme
     "inputOption.activeBackground": "{{selection_primary}}",
     "inputValidation.errorBackground": "{{mix red background 0.82}}",
     "inputValidation.errorBorder": "{{red}}",
-    "inputValidation.warningBackground": "{{mix yellow background 0.82}}",
-    "inputValidation.warningBorder": "{{yellow}}",
+    "inputValidation.warningBackground": "{{mix caution_dim background 0.82}}",
+    "inputValidation.warningBorder": "{{caution_dim}}",
     "inputValidation.infoBackground": "{{mix blue background 0.82}}",
     "inputValidation.infoBorder": "{{blue}}",
     "badge.background": "{{blue}}",
@@ -1763,7 +1944,7 @@ define vscode_theme
     "list.focusOutline": "{{blue}}",
     "list.highlightForeground": "{{bright_blue}}",
     "list.errorForeground": "{{bright_red}}",
-    "list.warningForeground": "{{bright_yellow}}",
+    "list.warningForeground": "{{caution}}",
     "tree.indentGuidesStroke": "{{very_dark}}",
 
     "activityBar.background": "{{background_two}}",
@@ -1822,8 +2003,8 @@ define vscode_theme
     "editor.selectionHighlightBackground": "{{very_dark}}80",
     "editor.wordHighlightBackground": "{{very_dark}}80",
     "editor.wordHighlightStrongBackground": "{{very_dark}}",
-    "editor.findMatchBackground": "{{yellow}}80",
-    "editor.findMatchHighlightBackground": "{{yellow}}40",
+    "editor.findMatchBackground": "{{caution_dim}}80",
+    "editor.findMatchHighlightBackground": "{{caution_dim}}40",
     "editor.findRangeHighlightBackground": "{{background_two}}",
     "editor.rangeHighlightBackground": "{{background_two}}",
     "editor.foldBackground": "{{background_two}}",
@@ -1839,15 +2020,15 @@ define vscode_theme
     "editorInlayHint.background": "#00000000",
     "editorGutter.background": "{{background}}",
     "editorGutter.addedBackground": "{{green}}",
-    "editorGutter.modifiedBackground": "{{yellow}}",
+    "editorGutter.modifiedBackground": "{{caution_dim}}",
     "editorGutter.deletedBackground": "{{red}}",
     "editorError.foreground": "{{bright_red}}",
-    "editorWarning.foreground": "{{bright_yellow}}",
+    "editorWarning.foreground": "{{caution}}",
     "editorInfo.foreground": "{{bright_blue}}",
     "editorHint.foreground": "{{bright_green}}",
     "editorOverviewRuler.border": "#00000000",
     "editorOverviewRuler.errorForeground": "{{red}}",
-    "editorOverviewRuler.warningForeground": "{{yellow}}",
+    "editorOverviewRuler.warningForeground": "{{caution_dim}}",
     "editorOverviewRuler.infoForeground": "{{blue}}",
     "editorWidget.background": "{{background_two}}",
     "editorWidget.border": "{{very_dark}}",
@@ -1873,7 +2054,7 @@ define vscode_theme
     "merge.incomingContentBackground": "{{mix blue background 0.82}}",
 
     "gitDecoration.addedResourceForeground": "{{bright_green}}",
-    "gitDecoration.modifiedResourceForeground": "{{bright_yellow}}",
+    "gitDecoration.modifiedResourceForeground": "{{caution}}",
     "gitDecoration.deletedResourceForeground": "{{bright_red}}",
     "gitDecoration.renamedResourceForeground": "{{bright_blue}}",
     "gitDecoration.untrackedResourceForeground": "{{bright_green}}",
@@ -1930,18 +2111,18 @@ define vscode_theme
     { "scope": ["keyword.operator", "punctuation", "meta.brace", "variable", "variable.other", "variable.parameter", "meta.object-literal.key", "support.variable.property"], "settings": { "foreground": "{{foreground}}" } },
     { "scope": ["keyword.control.directive", "meta.preprocessor", "entity.name.function.preprocessor", "punctuation.special"], "settings": { "foreground": "{{bright_orange}}" } },
     { "scope": ["string", "string.quoted", "string.template", "punctuation.definition.string"], "settings": { "foreground": "{{bright_green}}" } },
-    { "scope": ["string.regexp", "constant.character", "constant.character.escape", "constant.other.symbol"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["string.regexp", "constant.character", "constant.character.escape", "constant.other.symbol"], "settings": { "foreground": "{{emphasis}}" } },
     { "scope": ["constant.numeric", "constant.numeric.decimal"], "settings": { "foreground": "{{bright_blue}}" } },
-    { "scope": ["constant.language.boolean"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["constant.language.boolean"], "settings": { "foreground": "{{emphasis}}" } },
     { "scope": ["constant", "constant.language", "variable.other.constant", "variable.other.enummember"], "settings": { "foreground": "{{bright_magenta}}" } },
     { "scope": ["entity.name.type", "entity.name.class", "entity.other.inherited-class", "support.type", "support.class", "storage.type.primitive", "support.type.primitive", "entity.name.namespace"], "settings": { "foreground": "{{bright_blue}}" } },
-    { "scope": ["entity.name.function", "meta.function-call", "support.function", "entity.name.method", "meta.decorator", "entity.other.attribute-name"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["entity.name.function", "meta.function-call", "support.function", "entity.name.method", "meta.decorator", "entity.other.attribute-name"], "settings": { "foreground": "{{emphasis}}" } },
     { "scope": ["support.function.builtin", "support.function.console", "support.function.math"], "settings": { "foreground": "{{magenta}}" } },
     { "scope": ["entity.name.tag", "punctuation.definition.tag"], "settings": { "foreground": "{{bright_magenta}}" } },
     { "scope": ["entity.name.label"], "settings": { "foreground": "{{magenta}}" } },
     { "scope": ["markup.heading", "entity.name.section"], "settings": { "foreground": "{{bright_green}}", "fontStyle": "bold" } },
-    { "scope": ["markup.bold"], "settings": { "foreground": "{{bright_yellow}}", "fontStyle": "bold" } },
-    { "scope": ["markup.italic"], "settings": { "foreground": "{{bright_yellow}}", "fontStyle": "italic" } },
+    { "scope": ["markup.bold"], "settings": { "foreground": "{{emphasis}}", "fontStyle": "bold" } },
+    { "scope": ["markup.italic"], "settings": { "foreground": "{{emphasis}}", "fontStyle": "italic" } },
     { "scope": ["markup.strikethrough"], "settings": { "fontStyle": "strikethrough" } },
     { "scope": ["markup.underline.link", "string.other.link"], "settings": { "foreground": "{{bright_blue}}" } },
     { "scope": ["markup.inline.raw", "markup.fenced_code", "markup.raw"], "settings": { "foreground": "{{bright_magenta}}" } },
@@ -1949,7 +2130,7 @@ define vscode_theme
     { "scope": ["markup.list", "punctuation.definition.list.begin"], "settings": { "foreground": "{{bright_red}}" } },
     { "scope": ["markup.inserted", "meta.diff.header.to-file"], "settings": { "foreground": "{{bright_green}}" } },
     { "scope": ["markup.deleted", "meta.diff.header.from-file"], "settings": { "foreground": "{{bright_red}}" } },
-    { "scope": ["markup.changed"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["markup.changed"], "settings": { "foreground": "{{caution}}" } },
     { "scope": ["invalid", "invalid.illegal"], "settings": { "foreground": "{{bright_red}}" } }
   ],
   "semanticTokenColors": {
@@ -1959,9 +2140,9 @@ define vscode_theme
     "enum": "{{bright_blue}}",
     "type": "{{bright_blue}}",
     "typeParameter": "{{bright_magenta}}",
-    "enumMember": "{{bright_yellow}}",
-    "function": "{{bright_yellow}}",
-    "method": "{{bright_yellow}}",
+    "enumMember": "{{emphasis}}",
+    "function": "{{emphasis}}",
+    "method": "{{emphasis}}",
     "function.defaultLibrary": "{{magenta}}",
     "macro": "{{bright_orange}}",
     "variable": "{{foreground}}",
@@ -1969,11 +2150,11 @@ define vscode_theme
     "variable.defaultLibrary": "{{bright_red}}",
     "parameter": "{{foreground}}",
     "property": "{{foreground}}",
-    "decorator": "{{bright_yellow}}",
+    "decorator": "{{emphasis}}",
     "keyword": "{{bright_red}}",
     "number": "{{bright_blue}}",
     "string": "{{bright_green}}",
-    "regexp": "{{bright_yellow}}",
+    "regexp": "{{emphasis}}",
     "comment": { "foreground": "{{black}}", "italic": true }
   }
 }
@@ -1987,15 +2168,16 @@ endef
 define vscode_screenshot_sh
 set -e
 out="$PWD/$1"; width="$2"; height="$3"
+title=$(printf '%s' "$THEME" | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
 darkstar="$PWD"
 dir=$(mktemp -d /tmp/vscode.XXXX)
 trap 'rm -rf "$dir"' EXIT
 
 mkdir -p "$dir/user/User" "$dir/extensions"
 ln -s "$darkstar/vscode" "$dir/extensions/henrycatalinismith.darkstar-0.1.0"
-cat > "$dir/user/User/settings.json" <<'JSON'
+cat > "$dir/user/User/settings.json" <<JSON
 {
-  "workbench.colorTheme": "Darkstar",
+  "workbench.colorTheme": "$title",
   "workbench.startupEditor": "none",
   "workbench.tips.enabled": false,
   "workbench.enableExperiments": false,
@@ -2012,7 +2194,9 @@ cat > "$dir/user/User/settings.json" <<'JSON'
   "editor.bracketPairColorization.enabled": false,
   "git.blame.statusBarItem.enabled": false,
   "editor.cursorBlinking": "solid",
+  "editor.fontFamily": "Lilex",
   "editor.fontSize": 14,
+  "terminal.integrated.fontFamily": "Lilex",
   "window.zoomLevel": 0,
   "window.restoreWindows": "none",
   "window.commandCenter": false
@@ -2050,7 +2234,8 @@ kill "$pid"
 wait "$pid" 2>/dev/null || true
 endef
 
-export PALETTE := $(value palette)
+export PALETTE_darkstar := $(value darkstar_palette)
+export PALETTE_lightstar := $(value lightstar_palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
 export GHOSTTY := $(value ghostty)
@@ -2063,6 +2248,7 @@ export GHOSTTY_SCENE := $(value ghostty_scene)
 export HELIX_SCENE := $(value helix_scene)
 export LAZYGIT_SCENE := $(value lazygit_scene)
 export OPENCODE := $(value opencode)
+export OPENCODE_MODE := $(value opencode_mode)
 export OPENCODE_SCENE := $(value opencode_scene)
 export NVIM := $(value nvim)
 export NVIM_SCENE := $(value nvim_scene)

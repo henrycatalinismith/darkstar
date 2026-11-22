@@ -1,18 +1,18 @@
-"attribute" = "bright_yellow"
+"attribute" = "emphasis"
 "type" = "bright_blue"
 "type.parameter" = "bright_magenta"
-"type.enum.variant" = "bright_yellow"
-"constructor" = "bright_yellow"
+"type.enum.variant" = "emphasis"
+"constructor" = "emphasis"
 "constant" = "bright_magenta"
 "constant.builtin" = "bright_magenta"
-"constant.builtin.boolean" = "bright_yellow"
+"constant.builtin.boolean" = "emphasis"
 "constant.numeric" = "bright_blue"
-"constant.character" = "bright_yellow"
+"constant.character" = "emphasis"
 "string" = "bright_green"
-"string.regexp" = "bright_yellow"
-"string.special" = "bright_yellow"
+"string.regexp" = "emphasis"
+"string.special" = "emphasis"
 "comment" = { fg = "black", modifiers = ["italic"] }
-"comment.block.documentation" = { fg = "bright_yellow", modifiers = ["italic"] }
+"comment.block.documentation" = { fg = "emphasis", modifiers = ["italic"] }
 "variable" = "white"
 "variable.builtin" = "bright_red"
 "label" = "magenta"
@@ -20,7 +20,7 @@
 "keyword" = "bright_red"
 "keyword.directive" = "bright_orange"
 "operator" = "white"
-"function" = "bright_yellow"
+"function" = "emphasis"
 "function.macro" = "bright_orange"
 "function.builtin" = "magenta"
 "tag" = "bright_magenta"
@@ -29,11 +29,11 @@
 "namespace.mod_type" = "magenta"
 "markup.heading" = "bright_green"
 "markup.list" = "bright_red"
-"markup.bold" = { fg = "bright_yellow", modifiers = ["bold"] }
-"markup.italic" = { fg = "bright_yellow", modifiers = ["italic"] }
+"markup.bold" = { fg = "emphasis", modifiers = ["bold"] }
+"markup.italic" = { fg = "emphasis", modifiers = ["italic"] }
 "markup.strikethrough" = { modifiers = ["crossed_out"] }
 "markup.link.url" = "bright_blue"
-"markup.link.text" = "bright_yellow"
+"markup.link.text" = "emphasis"
 "markup.link.label" = "bright_magenta"
 "markup.raw" = "bright_magenta"
 "markup.quote" = "bright_green"
@@ -42,13 +42,13 @@
 "diff.delta" = "bright_yellow"
 "special" = "bright_orange"
 
-"warning" = "bright_yellow"
+"warning" = "caution"
 "error" = { fg = "bright_red", modifiers = ["bold"] }
 "info" = { fg = "bright_blue", modifiers = ["bold"] }
 "hint" = { fg = "bright_green", modifiers = ["bold"] }
 "diagnostic.hint" = { underline = { color = "bright_green", style = "curl" } }
 "diagnostic.info" = { underline = { color = "bright_blue", style = "curl" } }
-"diagnostic.warning" = { underline = { color = "bright_yellow", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "caution", style = "curl" } }
 "diagnostic.error" = { underline = { color = "bright_red", style = "curl" } }
 
 "diagnostic.deprecated" = { modifiers = ["crossed_out"] }
@@ -106,6 +106,9 @@ bright_cyan = "#56d8c9"
 bright_white = "#fbf0cc"
 orange = "#db5231"
 bright_orange = "#ed8649"
+emphasis = "#efc541"
+caution = "#efc541"
+caution_dim = "#b58900"
 cursor_color = "#839496"
 cursor_text = "#002b36"
 selection_background = "#002b36"

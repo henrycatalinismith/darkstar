@@ -19,6 +19,11 @@
         "label": "Darkstar",
         "uiTheme": "vs-dark",
         "path": "./darkstar-color-theme.json"
+      },
+      {
+        "label": "Lightstar",
+        "uiTheme": "vs",
+        "path": "./lightstar-color-theme.json"
       }
     ]
   }
