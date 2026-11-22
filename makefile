@@ -4,7 +4,9 @@
 #   make check    fail if any colour is below its minimum contrast
 #   make palette  print every colour with its contrast ratio
 #   make install  copy the theme files into ~/.config
-#   make clean    delete the rendered theme files
+#   make repo     build ./repo, a test git repo with fixed dates
+#   make screenshots  capture each app in Ghostty (macOS only)
+#   make clean    delete the rendered theme files and ./repo
 #
 # Everything lives in this file: the palette, the templates for each app
 # and the awk that renders them. Templates use {{name}} for a palette
@@ -14,13 +16,15 @@
 OUTPUTS := \
 	ghostty/darkstar.toml \
 	helix/darkstar.toml \
-	lazygit/darkstar.yml
+	lazygit/darkstar.yml \
+	opencode/darkstar.json
 
 all: $(OUTPUTS)
 
 ghostty/darkstar.toml: TEMPLATE = GHOSTTY
 helix/darkstar.toml: TEMPLATE = HELIX
 lazygit/darkstar.yml: TEMPLATE = LAZYGIT
+opencode/darkstar.json: TEMPLATE = OPENCODE
 
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
@@ -35,15 +39,59 @@ palette:
 	@awk -v strict=0 "$$CHECK_AWK"
 
 install: all
-	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit
+	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/opencode/themes
 	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
 	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
+	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
 
 clean:
 	rm -f $(OUTPUTS)
+	rm -rf repo
 
-.PHONY: all check palette install clean
+# A small git repo with fixed authors, dates and contents, so the
+# screenshots come out the same every time.
+repo: makefile
+	@sh -c "$$FIXTURE_SH"
+	@echo "  $@"
+
+SCREENSHOTS := \
+	screenshots/ghostty.png \
+	screenshots/helix.png \
+	screenshots/lazygit.png \
+	screenshots/opencode.png
+
+screenshots: $(SCREENSHOTS)
+
+# Every screenshot uses the same window size, in columns and rows.
+SIZE := 110 32
+
+screenshots/ghostty.png: SCENE = GHOSTTY_SCENE
+screenshots/ghostty.png: TITLE = Ghostty
+screenshots/ghostty.png: WAIT = 1
+screenshots/ghostty.png: ghostty/darkstar.toml
+
+screenshots/helix.png: SCENE = HELIX_SCENE
+screenshots/helix.png: TITLE = Helix
+screenshots/helix.png: WAIT = 2
+screenshots/helix.png: ghostty/darkstar.toml helix/darkstar.toml repo
+
+screenshots/lazygit.png: SCENE = LAZYGIT_SCENE
+screenshots/lazygit.png: TITLE = Lazygit
+screenshots/lazygit.png: WAIT = 3
+screenshots/lazygit.png: ghostty/darkstar.toml lazygit/darkstar.yml repo
+
+screenshots/opencode.png: SCENE = OPENCODE_SCENE
+screenshots/opencode.png: TITLE = opencode
+screenshots/opencode.png: WAIT = 5
+screenshots/opencode.png: ghostty/darkstar.toml opencode/darkstar.json repo
+
+$(SCREENSHOTS): makefile
+	@mkdir -p $(@D)
+	@sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
+	@echo "  $@"
+
+.PHONY: all check palette install clean screenshots
 
 # Name, hex value and the minimum contrast ratio against the background.
 # 4.5 is WCAG AA and 7 is WCAG AAA. A dash means the colour isn't used for
@@ -346,9 +394,550 @@ surface = "{{surface}}"
 surface_low = "{{surface_low}}"
 endef
 
+
+# Builds ./repo: a tiny TypeScript project with a few authors, a merged
+# branch and some uncommitted changes, all with fixed dates.
+define fixture_sh
+set -e
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+rm -rf repo
+mkdir -p repo/src repo/test
+cd repo
+git init -q -b main
+
+as() {
+  d="$1" n="$2" e="$3"
+  shift 3
+  GIT_AUTHOR_DATE="$d" GIT_COMMITTER_DATE="$d" \
+  GIT_AUTHOR_NAME="$n" GIT_COMMITTER_NAME="$n" \
+  GIT_AUTHOR_EMAIL="$e" GIT_COMMITTER_EMAIL="$e" \
+  git "$@"
+}
+
+ada="Ada Lovelace"; ada_email="ada@example.com"
+grace="Grace Hopper"; grace_email="grace@example.com"
+alan="Alan Turing"; alan_email="alan@example.com"
+
+cat > readme.md <<'EOF'
+# basket
+
+A shopping basket with discount codes.
+EOF
+cat > package.json <<'EOF'
+{
+  "name": "basket",
+  "version": "0.1.0",
+  "type": "module"
+}
+EOF
+git add -A
+as "2024-03-01T09:12:00Z" "$ada" "$ada_email" commit -q -m "Initial commit"
+
+cat > src/cart.ts <<'EOF'
+export type Item = {
+  sku: string;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
+export type Cart = {
+  items: Item[];
+};
+
+export function addItem(cart: Cart, item: Item): Cart {
+  return { ...cart, items: [...cart.items, item] };
+}
+EOF
+git add -A
+as "2024-03-02T10:30:00Z" "$ada" "$ada_email" commit -q -m "Add basket model"
+
+cat >> src/cart.ts <<'EOF'
+
+export function subtotal(cart: Cart): number {
+  return cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+EOF
+git add -A
+as "2024-03-04T14:05:00Z" "$grace" "$grace_email" commit -q -m "Calculate subtotal"
+
+git checkout -q -b discount-codes
+cat > src/discounts.ts <<'EOF'
+export type Discount = {
+  code: string;
+  percent: number;
+  expires?: Date;
+};
+
+const discounts: Record<string, Discount> = {
+  SPRING24: { code: "SPRING24", percent: 10 },
+  WELCOME: { code: "WELCOME", percent: 15 },
+};
+
+export function findDiscount(code: string): Discount | undefined {
+  return discounts[code.trim().toUpperCase()];
+}
+EOF
+git add -A
+as "2024-03-05T11:20:00Z" "$alan" "$alan_email" commit -q -m "Add discount code lookup"
+
+cat >> src/cart.ts <<'EOF'
+
+/**
+ * Applies a discount code to the cart's subtotal.
+ * Unknown or expired codes leave the price unchanged.
+ */
+export function applyDiscount(cart: Cart, code: string, now = new Date()): number {
+  const discount = findDiscount(code);
+  if (!discount || (discount.expires && discount.expires < now)) {
+    return subtotal(cart);
+  }
+  return Math.round(subtotal(cart) * (100 - discount.percent)) / 100;
+}
+EOF
+{ printf 'import { findDiscount } from "./discounts";\n\n'; cat src/cart.ts; } > src/cart.tmp
+mv src/cart.tmp src/cart.ts
+git add -A
+as "2024-03-06T16:45:00Z" "$alan" "$alan_email" commit -q -m "Apply discount codes to the subtotal"
+
+git checkout -q main
+cat > test/cart.test.ts <<'EOF'
+import { strict as assert } from "node:assert";
+import { addItem, subtotal } from "../src/cart";
+
+const apple = { sku: "A1", name: "Apple", price: 0.4, quantity: 3 };
+
+assert.equal(subtotal(addItem({ items: [] }, apple)), 1.2);
+EOF
+git add -A
+as "2024-03-07T09:00:00Z" "$grace" "$grace_email" commit -q -m "Test the subtotal"
+
+as "2024-03-08T13:15:00Z" "$ada" "$ada_email" merge -q --no-ff discount-codes -m "Merge branch 'discount-codes'"
+
+sed -i.bak 's/version": "0.1.0"/version": "0.2.0"/' package.json && rm package.json.bak
+git add -A
+as "2024-03-09T10:40:00Z" "$ada" "$ada_email" commit -q -m "Release 0.2.0"
+
+cat >> test/cart.test.ts <<'EOF'
+
+assert.equal(applyDiscount({ items: [apple] }, "spring24"), 1.08);
+EOF
+sed -i.bak 's/import { addItem, subtotal }/import { addItem, applyDiscount, subtotal }/' test/cart.test.ts
+rm test/cart.test.ts.bak
+printf 'node_modules/\n' > .gitignore
+endef
+
+# Opens a Ghostty window with its own config, runs a scene in it, captures
+# the window with screencapture and closes it again.
+#
+# Arguments: output file, columns, rows, seconds to wait, scene script and
+# window title.
+define screenshot_sh
+set -e
+out="$PWD/$1"; cols="$2"; rows="$3"; wait="$4"; scene="$5"; title="$6"
+dir=$(mktemp -d)
+trap 'rm -rf "$dir"' EXIT
+
+cat > "$dir/config" <<EOF
+theme = $PWD/ghostty/darkstar.toml
+title = $title
+window-width = $cols
+window-height = $rows
+window-padding-x = 12
+window-padding-y = 10
+font-size = 14
+cursor-style-blink = false
+shell-integration = none
+confirm-close-surface = false
+window-save-state = never
+quit-after-last-window-closed = true
+macos-titlebar-style = native
+EOF
+
+{
+  printf '#!/bin/sh\n'
+  printf 'export PATH=%s\n' "'$PATH'"
+  printf 'export DARKSTAR=%s SCENE_DIR=%s\n' "'$PWD'" "'$dir'"
+  [ -n "$HELIX_RUNTIME" ] && printf 'export HELIX_RUNTIME=%s\n' "'$HELIX_RUNTIME'"
+  printf 'printf "\\033[H\\033[2J"\n'
+  printf '%s\n' "$scene"
+} > "$dir/scene"
+chmod +x "$dir/scene"
+
+open -na Ghostty.app --args --config-default-files=false \
+  --config-file="$dir/config" -e "$dir/scene"
+
+pid=; window=
+for i in $(seq 50); do
+  pid=$(pgrep -f "config-file=$dir/config" | head -1)
+  if [ -n "$pid" ]; then
+    window=$(osascript -l JavaScript -e "$WINDOW_ID_JS" "$pid")
+    [ -n "$window" ] && break
+  fi
+  sleep 0.2
+done
+if [ -z "$window" ]; then
+  echo "couldn't find the Ghostty window" >&2
+  [ -n "$pid" ] && kill "$pid"
+  exit 1
+fi
+
+sleep "$wait"
+screencapture -x -o -l "$window" "$out" || {
+  echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
+  kill "$pid"
+  exit 1
+}
+kill "$pid"
+endef
+
+# Prints the macOS window number of the first window belonging to a PID.
+define window_id_js
+ObjC.import("CoreGraphics")
+function run(argv) {
+  const pid = parseInt(argv[0], 10)
+  const list = ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly, 0))
+  const window = ObjC.deepUnwrap(list).find(w => w.kCGWindowOwnerPID === pid && w.kCGWindowLayer === 0)
+  return window ? String(window.kCGWindowNumber) : ""
+}
+endef
+
+define ghostty_scene
+printf '\033[?25l\n'
+for i in 0 1 2 3 4 5 6 7; do
+  set -- black red green yellow blue magenta cyan white
+  shift "$i"
+  printf '  \033[3%sm%-16s\033[0m  \033[9%sm%s\033[0m\n' "$i" "$1" "$i" "bright $1"
+done
+printf '\n  default text  \033[1mbold\033[0m  \033[3mitalic\033[0m  \033[4munderline\033[0m\n'
+printf '\n  \033[7m selected text \033[0m\n'
+sleep 60
+endef
+
+define helix_scene
+mkdir -p "$SCENE_DIR/xdg/helix/themes"
+cp "$DARKSTAR/helix/darkstar.toml" "$SCENE_DIR/xdg/helix/themes/"
+printf 'theme = "darkstar"\n' > "$SCENE_DIR/xdg/helix/config.toml"
+export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_CACHE_HOME="$SCENE_DIR/cache"
+cd "$DARKSTAR/repo"
+exec hx src/cart.ts:24
+endef
+
+define lazygit_scene
+mkdir -p "$SCENE_DIR/lazygit"
+cat > "$SCENE_DIR/lazygit/config.yml" <<'EOF'
+gui:
+  nerdFontsVersion: "3"
+  showRandomTip: false
+git:
+  branchLogCmd: git log --graph --color=always --abbrev-commit --decorate --date=short --pretty=medium {{branchName}} --
+update:
+  method: never
+disableStartupPopups: true
+EOF
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+cd "$DARKSTAR/repo"
+exec lazygit -ucd "$SCENE_DIR/lazygit" \
+  -ucf "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/darkstar.yml"
+endef
+
+define opencode
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "base": {
+    "categorical": [
+      "blue",
+      "purple",
+      "green",
+      "orange",
+      "red",
+      "yellow",
+      "cyan"
+    ],
+    "text": {
+      "base": "{{foreground}}",
+      "muted": "$hue.neutral.300",
+      "action": {
+        "primary": {
+          "base": "$text.base",
+          "$disabled": "$text.muted",
+          "$focused": "$text.base",
+          "$selected": "$hue.interactive.400"
+        },
+        "secondary": {
+          "base": "$text.muted",
+          "$hovered": "$text.base",
+          "$focused": "$hue.interactive.200"
+        },
+        "destructive": {
+          "base": "$hue.neutral.900",
+          "$disabled": "$text.muted"
+        }
+      },
+      "formfield": {
+        "base": "$text.base",
+        "$hovered": "$hue.interactive.400",
+        "$focused": "$hue.interactive.400",
+        "$pressed": "$hue.interactive.400",
+        "$disabled": "$text.muted",
+        "$selected": "$hue.interactive.400"
+      },
+      "feedback": {
+        "error": {
+          "base": "$hue.red.400"
+        },
+        "warning": {
+          "base": "$hue.yellow.400"
+        },
+        "success": {
+          "base": "$hue.green.400"
+        },
+        "info": {
+          "base": "$hue.blue.400"
+        }
+      }
+    },
+    "background": {
+      "base": "$hue.neutral.900",
+      "raised": {
+        "base": "$hue.neutral.700",
+        "high": "$hue.neutral.600",
+        "max": "$hue.neutral.500"
+      },
+      "action": {
+        "primary": {
+          "base": "transparent",
+          "$hovered": "$hue.neutral.700",
+          "$focused": "$hue.interactive.600",
+          "$selected": "transparent"
+        },
+        "secondary": {
+          "base": "transparent"
+        },
+        "destructive": {
+          "base": "$hue.red.400"
+        }
+      },
+      "formfield": {
+        "base": "$background.base"
+      },
+      "feedback": {
+        "error": {
+          "base": "$background.base"
+        },
+        "warning": {
+          "base": "$background.base"
+        },
+        "success": {
+          "base": "$background.base"
+        },
+        "info": {
+          "base": "$background.base"
+        }
+      }
+    },
+    "border": {
+      "base": "{{very_dark}}"
+    },
+    "scrollbar": {
+      "base": "{{linenr}}"
+    },
+    "diff": {
+      "text": {
+        "added": "{{bright_green}}",
+        "removed": "{{bright_red}}",
+        "context": "{{bright_black}}",
+        "hunkHeader": "{{bright_black}}"
+      },
+      "background": {
+        "added": "{{mix green background 0.82}}",
+        "removed": "{{mix red background 0.82}}",
+        "context": "$hue.neutral.700"
+      },
+      "highlight": {
+        "added": "{{bright_green}}",
+        "removed": "{{bright_red}}"
+      },
+      "lineNumber": {
+        "text": "{{linenr}}",
+        "background": {
+          "added": "{{mix green background 0.88}}",
+          "removed": "{{mix red background 0.88}}"
+        }
+      }
+    },
+    "syntax": {
+      "comment": "{{black}}",
+      "keyword": "{{bright_red}}",
+      "function": "{{bright_yellow}}",
+      "variable": "{{foreground}}",
+      "string": "{{bright_green}}",
+      "number": "{{bright_blue}}",
+      "type": "{{bright_blue}}",
+      "operator": "{{foreground}}",
+      "punctuation": "{{foreground}}"
+    },
+    "markdown": {
+      "text": "{{foreground}}",
+      "heading": "{{bright_green}}",
+      "link": "{{bright_blue}}",
+      "linkText": "{{bright_yellow}}",
+      "code": "{{bright_cyan}}",
+      "blockQuote": "{{bright_green}}",
+      "emphasis": "{{bright_yellow}}",
+      "strong": "{{bright_yellow}}",
+      "horizontalRule": "{{black}}",
+      "listItem": "{{bright_red}}",
+      "listEnumeration": "{{bright_red}}",
+      "image": "{{bright_blue}}",
+      "imageText": "{{bright_yellow}}",
+      "codeBlock": "{{foreground}}"
+    },
+    "@dialog": {
+      "background": {
+        "base": "$background.raised.base",
+        "action": {
+          "primary": {
+            "$hovered": "$background.raised.max"
+          },
+          "secondary": {
+            "$hovered": "$background.raised.max"
+          }
+        }
+      },
+      "@footer": {
+        "text": {
+          "muted": "$hue.neutral.200"
+        }
+      }
+    }
+  },
+  "dark": {
+    "hue": {
+      "red": {
+        "100": "{{mix bright_red #ffffff 0.6}}",
+        "200": "{{mix bright_red #ffffff 0.3}}",
+        "300": "{{mix bright_red #ffffff 0.12}}",
+        "400": "{{bright_red}}",
+        "500": "{{red}}",
+        "600": "{{mix red background 0.6}}",
+        "700": "{{mix red background 0.78}}",
+        "800": "{{mix red background 0.88}}",
+        "900": "{{mix red background 0.95}}"
+      },
+      "orange": {
+        "100": "{{mix bright_orange #ffffff 0.6}}",
+        "200": "{{mix bright_orange #ffffff 0.3}}",
+        "300": "{{mix bright_orange #ffffff 0.12}}",
+        "400": "{{bright_orange}}",
+        "500": "{{orange}}",
+        "600": "{{mix orange background 0.6}}",
+        "700": "{{mix orange background 0.78}}",
+        "800": "{{mix orange background 0.88}}",
+        "900": "{{mix orange background 0.95}}"
+      },
+      "yellow": {
+        "100": "{{mix bright_yellow #ffffff 0.6}}",
+        "200": "{{mix bright_yellow #ffffff 0.3}}",
+        "300": "{{mix bright_yellow #ffffff 0.12}}",
+        "400": "{{bright_yellow}}",
+        "500": "{{yellow}}",
+        "600": "{{mix yellow background 0.6}}",
+        "700": "{{mix yellow background 0.78}}",
+        "800": "{{mix yellow background 0.88}}",
+        "900": "{{mix yellow background 0.95}}"
+      },
+      "green": {
+        "100": "{{mix bright_green #ffffff 0.6}}",
+        "200": "{{mix bright_green #ffffff 0.3}}",
+        "300": "{{mix bright_green #ffffff 0.12}}",
+        "400": "{{bright_green}}",
+        "500": "{{green}}",
+        "600": "{{mix green background 0.6}}",
+        "700": "{{mix green background 0.78}}",
+        "800": "{{mix green background 0.88}}",
+        "900": "{{mix green background 0.95}}"
+      },
+      "cyan": {
+        "100": "{{mix bright_cyan #ffffff 0.6}}",
+        "200": "{{mix bright_cyan #ffffff 0.3}}",
+        "300": "{{mix bright_cyan #ffffff 0.12}}",
+        "400": "{{bright_cyan}}",
+        "500": "{{cyan}}",
+        "600": "{{mix cyan background 0.6}}",
+        "700": "{{mix cyan background 0.78}}",
+        "800": "{{mix cyan background 0.88}}",
+        "900": "{{mix cyan background 0.95}}"
+      },
+      "blue": {
+        "100": "{{mix bright_blue #ffffff 0.6}}",
+        "200": "{{mix bright_blue #ffffff 0.3}}",
+        "300": "{{mix bright_blue #ffffff 0.12}}",
+        "400": "{{bright_blue}}",
+        "500": "{{blue}}",
+        "600": "{{mix blue background 0.6}}",
+        "700": "{{mix blue background 0.78}}",
+        "800": "{{mix blue background 0.88}}",
+        "900": "{{mix blue background 0.95}}"
+      },
+      "purple": {
+        "100": "{{mix bright_magenta #ffffff 0.6}}",
+        "200": "{{mix bright_magenta #ffffff 0.3}}",
+        "300": "{{mix bright_magenta #ffffff 0.12}}",
+        "400": "{{bright_magenta}}",
+        "500": "{{magenta}}",
+        "600": "{{mix magenta background 0.6}}",
+        "700": "{{mix magenta background 0.78}}",
+        "800": "{{mix magenta background 0.88}}",
+        "900": "{{mix magenta background 0.95}}"
+      },
+      "gray": {
+        "100": "{{bright_white}}",
+        "200": "{{foreground}}",
+        "300": "{{bright_black}}",
+        "400": "{{linenr}}",
+        "500": "{{selection_primary}}",
+        "600": "{{surface}}",
+        "700": "{{background_two}}",
+        "800": "{{surface_low}}",
+        "900": "{{background}}"
+      },
+      "accent": "$hue.blue",
+      "interactive": "$hue.blue",
+      "neutral": "$hue.gray"
+    }
+  }
+}
+endef
+
+
+define opencode_scene
+mkdir -p "$SCENE_DIR/xdg/opencode/themes"
+cp "$DARKSTAR/opencode/darkstar.json" "$SCENE_DIR/xdg/opencode/themes/"
+cat > "$SCENE_DIR/xdg/opencode/cli.json" <<'JSON'
+{
+  "theme": { "name": "darkstar" },
+  "animations": false
+}
+JSON
+export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_DATA_HOME="$SCENE_DIR/data"
+export XDG_STATE_HOME="$SCENE_DIR/state" XDG_CACHE_HOME="$SCENE_DIR/cache"
+export OPENCODE_DISABLE_AUTOUPDATE=1
+cd "$DARKSTAR/repo"
+exec opencode --standalone
+endef
+
 export PALETTE := $(value palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
 export GHOSTTY := $(value ghostty)
 export HELIX := $(value helix)
 export LAZYGIT := $(value lazygit)
+export FIXTURE_SH := $(value fixture_sh)
+export SCREENSHOT_SH := $(value screenshot_sh)
+export WINDOW_ID_JS := $(value window_id_js)
+export GHOSTTY_SCENE := $(value ghostty_scene)
+export HELIX_SCENE := $(value helix_scene)
+export LAZYGIT_SCENE := $(value lazygit_scene)
+export OPENCODE := $(value opencode)
+export OPENCODE_SCENE := $(value opencode_scene)
