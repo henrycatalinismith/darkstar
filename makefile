@@ -20,7 +20,9 @@ OUTPUTS := \
 	nvim/colors/darkstar.lua \
 	opencode/darkstar.json \
 	zellij/darkstar.kdl \
-	zed/darkstar.json
+	zed/darkstar.json \
+	vscode/package.json \
+	vscode/darkstar-color-theme.json
 
 all: $(OUTPUTS)
 
@@ -31,6 +33,8 @@ nvim/colors/darkstar.lua: TEMPLATE = NVIM
 opencode/darkstar.json: TEMPLATE = OPENCODE
 zellij/darkstar.kdl: TEMPLATE = ZELLIJ
 zed/darkstar.json: TEMPLATE = ZED
+vscode/package.json: TEMPLATE = VSCODE_PACKAGE
+vscode/darkstar-color-theme.json: TEMPLATE = VSCODE_THEME
 
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
@@ -45,7 +49,7 @@ palette:
 	@awk -v strict=0 "$$CHECK_AWK"
 
 install: all
-	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes ~/.config/zed/themes
+	mkdir -p ~/.config/ghostty/themes ~/.config/helix/themes ~/.config/lazygit ~/.config/nvim/colors ~/.config/opencode/themes ~/.config/zellij/themes ~/.config/zed/themes ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0
 	install -m 644 ghostty/darkstar.toml ~/.config/ghostty/themes/darkstar.toml
 	install -m 644 helix/darkstar.toml ~/.config/helix/themes/darkstar.toml
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
@@ -53,6 +57,8 @@ install: all
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
 	install -m 644 zellij/darkstar.kdl ~/.config/zellij/themes/darkstar.kdl
 	install -m 644 zed/darkstar.json ~/.config/zed/themes/darkstar.json
+	install -m 644 vscode/package.json ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0/package.json
+	install -m 644 vscode/darkstar-color-theme.json ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0/darkstar-color-theme.json
 
 clean:
 	rm -f $(OUTPUTS)
@@ -72,7 +78,7 @@ SCREENSHOTS := \
 	screenshots/opencode.png \
 	screenshots/zellij.png
 
-screenshots: $(SCREENSHOTS) screenshots/zed.png
+screenshots: $(SCREENSHOTS) screenshots/zed.png screenshots/vscode.png
 
 # Every screenshot uses the same window size, in columns and rows.
 SIZE := 110 32
@@ -117,6 +123,11 @@ $(SCREENSHOTS): makefile
 screenshots/zed.png: zed/darkstar.json repo makefile
 	@mkdir -p $(@D)
 	@sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
+	@echo "  $@"
+
+screenshots/vscode.png: vscode/package.json vscode/darkstar-color-theme.json repo makefile
+	@mkdir -p $(@D)
+	@sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
 .PHONY: all check palette install clean screenshots
@@ -1661,6 +1672,384 @@ kill "$pid"
 wait "$pid" 2>/dev/null || true
 endef
 
+
+define vscode_package
+{
+  "name": "darkstar",
+  "displayName": "Darkstar",
+  "description": "Solarized without the contrast bugs",
+  "version": "0.1.0",
+  "publisher": "henrycatalinismith",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henrycatalinismith/darkstar"
+  },
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": ["Themes"],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Darkstar",
+        "uiTheme": "vs-dark",
+        "path": "./darkstar-color-theme.json"
+      }
+    ]
+  }
+}
+endef
+
+define vscode_theme
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Darkstar",
+  "type": "dark",
+  "semanticHighlighting": true,
+  "colors": {
+    "foreground": "{{foreground}}",
+    "descriptionForeground": "{{bright_black}}",
+    "disabledForeground": "{{linenr}}",
+    "errorForeground": "{{bright_red}}",
+    "focusBorder": "{{blue}}",
+    "icon.foreground": "{{foreground}}",
+    "selection.background": "{{selection_primary}}",
+    "widget.border": "{{very_dark}}",
+    "widget.shadow": "#00000080",
+    "sash.hoverBorder": "{{blue}}",
+    "textLink.foreground": "{{bright_blue}}",
+    "textLink.activeForeground": "{{bright_cyan}}",
+    "textPreformat.foreground": "{{bright_magenta}}",
+    "textBlockQuote.background": "{{background_two}}",
+    "textBlockQuote.border": "{{very_dark}}",
+    "textCodeBlock.background": "{{background_two}}",
+    "progressBar.background": "{{blue}}",
+
+    "button.background": "{{blue}}",
+    "button.foreground": "{{background}}",
+    "button.hoverBackground": "{{bright_blue}}",
+    "button.secondaryBackground": "{{surface}}",
+    "button.secondaryForeground": "{{foreground}}",
+    "button.secondaryHoverBackground": "{{very_dark}}",
+    "checkbox.background": "{{background_two}}",
+    "checkbox.border": "{{very_dark}}",
+    "dropdown.background": "{{background_two}}",
+    "dropdown.border": "{{very_dark}}",
+    "input.background": "{{background_two}}",
+    "input.border": "{{very_dark}}",
+    "input.foreground": "{{foreground}}",
+    "input.placeholderForeground": "{{black}}",
+    "inputOption.activeBorder": "{{blue}}",
+    "inputOption.activeBackground": "{{selection_primary}}",
+    "inputValidation.errorBackground": "{{mix red background 0.82}}",
+    "inputValidation.errorBorder": "{{red}}",
+    "inputValidation.warningBackground": "{{mix yellow background 0.82}}",
+    "inputValidation.warningBorder": "{{yellow}}",
+    "inputValidation.infoBackground": "{{mix blue background 0.82}}",
+    "inputValidation.infoBorder": "{{blue}}",
+    "badge.background": "{{blue}}",
+    "badge.foreground": "{{background}}",
+    "scrollbar.shadow": "#00000000",
+    "scrollbarSlider.background": "{{very_dark}}80",
+    "scrollbarSlider.hoverBackground": "{{very_dark}}",
+    "scrollbarSlider.activeBackground": "{{linenr}}",
+
+    "list.activeSelectionBackground": "{{selection_primary}}",
+    "list.activeSelectionForeground": "{{foreground}}",
+    "list.inactiveSelectionBackground": "{{surface}}",
+    "list.inactiveSelectionForeground": "{{foreground}}",
+    "list.hoverBackground": "{{background_two}}",
+    "list.focusOutline": "{{blue}}",
+    "list.highlightForeground": "{{bright_blue}}",
+    "list.errorForeground": "{{bright_red}}",
+    "list.warningForeground": "{{bright_yellow}}",
+    "tree.indentGuidesStroke": "{{very_dark}}",
+
+    "activityBar.background": "{{background_two}}",
+    "activityBar.foreground": "{{foreground}}",
+    "activityBar.inactiveForeground": "{{linenr}}",
+    "activityBar.border": "{{very_dark}}",
+    "activityBar.activeBorder": "{{foreground}}",
+    "activityBarBadge.background": "{{blue}}",
+    "activityBarBadge.foreground": "{{background}}",
+    "sideBar.background": "{{background_two}}",
+    "sideBar.foreground": "{{foreground}}",
+    "sideBar.border": "{{very_dark}}",
+    "sideBarTitle.foreground": "{{bright_black}}",
+    "sideBarSectionHeader.background": "{{background_two}}",
+    "sideBarSectionHeader.foreground": "{{foreground}}",
+    "sideBarSectionHeader.border": "{{very_dark}}",
+
+    "titleBar.activeBackground": "{{background_two}}",
+    "titleBar.activeForeground": "{{foreground}}",
+    "titleBar.inactiveBackground": "{{background_two}}",
+    "titleBar.inactiveForeground": "{{bright_black}}",
+    "titleBar.border": "{{very_dark}}",
+    "commandCenter.background": "{{background}}",
+    "commandCenter.foreground": "{{bright_black}}",
+    "commandCenter.border": "{{very_dark}}",
+    "menu.background": "{{background_two}}",
+    "menu.foreground": "{{foreground}}",
+    "menu.selectionBackground": "{{selection_primary}}",
+    "menu.separatorBackground": "{{very_dark}}",
+
+    "editorGroup.border": "{{very_dark}}",
+    "editorGroupHeader.tabsBackground": "{{background_two}}",
+    "editorGroupHeader.tabsBorder": "{{very_dark}}",
+    "tab.activeBackground": "{{background}}",
+    "tab.activeForeground": "{{foreground}}",
+    "tab.activeBorderTop": "{{blue}}",
+    "tab.inactiveBackground": "{{background_two}}",
+    "tab.inactiveForeground": "{{bright_black}}",
+    "tab.border": "{{very_dark}}",
+    "tab.hoverBackground": "{{background}}",
+    "breadcrumb.foreground": "{{bright_black}}",
+    "breadcrumb.focusForeground": "{{foreground}}",
+    "breadcrumb.activeSelectionForeground": "{{foreground}}",
+    "breadcrumbPicker.background": "{{background_two}}",
+
+    "editor.background": "{{background}}",
+    "editor.foreground": "{{foreground}}",
+    "editorLineNumber.foreground": "{{linenr}}",
+    "editorLineNumber.activeForeground": "{{blue}}",
+    "editorCursor.foreground": "{{foreground}}",
+    "editorCursor.background": "{{background}}",
+    "editor.lineHighlightBackground": "{{cursorline}}",
+    "editor.lineHighlightBorder": "#00000000",
+    "editor.selectionBackground": "{{selection_primary}}",
+    "editor.inactiveSelectionBackground": "{{selection_primary}}99",
+    "editor.selectionHighlightBackground": "{{very_dark}}80",
+    "editor.wordHighlightBackground": "{{very_dark}}80",
+    "editor.wordHighlightStrongBackground": "{{very_dark}}",
+    "editor.findMatchBackground": "{{yellow}}80",
+    "editor.findMatchHighlightBackground": "{{yellow}}40",
+    "editor.findRangeHighlightBackground": "{{background_two}}",
+    "editor.rangeHighlightBackground": "{{background_two}}",
+    "editor.foldBackground": "{{background_two}}",
+    "editorBracketMatch.background": "{{background_two}}",
+    "editorBracketMatch.border": "{{linenr}}",
+    "editorWhitespace.foreground": "{{very_dark}}",
+    "editorIndentGuide.background1": "{{very_dark}}",
+    "editorIndentGuide.activeBackground1": "{{linenr}}",
+    "editorRuler.foreground": "{{very_dark}}",
+    "editorCodeLens.foreground": "{{bright_black}}",
+    "editorLink.activeForeground": "{{bright_blue}}",
+    "editorInlayHint.foreground": "{{bright_black}}",
+    "editorInlayHint.background": "#00000000",
+    "editorGutter.background": "{{background}}",
+    "editorGutter.addedBackground": "{{green}}",
+    "editorGutter.modifiedBackground": "{{yellow}}",
+    "editorGutter.deletedBackground": "{{red}}",
+    "editorError.foreground": "{{bright_red}}",
+    "editorWarning.foreground": "{{bright_yellow}}",
+    "editorInfo.foreground": "{{bright_blue}}",
+    "editorHint.foreground": "{{bright_green}}",
+    "editorOverviewRuler.border": "#00000000",
+    "editorOverviewRuler.errorForeground": "{{red}}",
+    "editorOverviewRuler.warningForeground": "{{yellow}}",
+    "editorOverviewRuler.infoForeground": "{{blue}}",
+    "editorWidget.background": "{{background_two}}",
+    "editorWidget.border": "{{very_dark}}",
+    "editorSuggestWidget.background": "{{background_two}}",
+    "editorSuggestWidget.border": "{{very_dark}}",
+    "editorSuggestWidget.selectedBackground": "{{selection_primary}}",
+    "editorSuggestWidget.highlightForeground": "{{bright_blue}}",
+    "editorHoverWidget.background": "{{background_two}}",
+    "editorHoverWidget.border": "{{very_dark}}",
+    "peekView.border": "{{blue}}",
+    "peekViewEditor.background": "{{background_two}}",
+    "peekViewResult.background": "{{background_two}}",
+    "peekViewTitle.background": "{{background_two}}",
+    "minimap.background": "{{background}}",
+
+    "diffEditor.insertedTextBackground": "{{mix green background 0.7}}",
+    "diffEditor.removedTextBackground": "{{mix red background 0.7}}",
+    "diffEditor.insertedLineBackground": "{{mix green background 0.82}}",
+    "diffEditor.removedLineBackground": "{{mix red background 0.82}}",
+    "merge.currentHeaderBackground": "{{mix green background 0.7}}",
+    "merge.currentContentBackground": "{{mix green background 0.82}}",
+    "merge.incomingHeaderBackground": "{{mix blue background 0.7}}",
+    "merge.incomingContentBackground": "{{mix blue background 0.82}}",
+
+    "gitDecoration.addedResourceForeground": "{{bright_green}}",
+    "gitDecoration.modifiedResourceForeground": "{{bright_yellow}}",
+    "gitDecoration.deletedResourceForeground": "{{bright_red}}",
+    "gitDecoration.renamedResourceForeground": "{{bright_blue}}",
+    "gitDecoration.untrackedResourceForeground": "{{bright_green}}",
+    "gitDecoration.ignoredResourceForeground": "{{linenr}}",
+    "gitDecoration.conflictingResourceForeground": "{{bright_orange}}",
+
+    "panel.background": "{{background}}",
+    "panel.border": "{{very_dark}}",
+    "panelTitle.activeForeground": "{{foreground}}",
+    "panelTitle.inactiveForeground": "{{bright_black}}",
+    "panelTitle.activeBorder": "{{foreground}}",
+    "statusBar.background": "{{background_two}}",
+    "statusBar.foreground": "{{bright_black}}",
+    "statusBar.border": "{{very_dark}}",
+    "statusBar.noFolderBackground": "{{background_two}}",
+    "statusBar.debuggingBackground": "{{orange}}",
+    "statusBar.debuggingForeground": "{{background}}",
+    "statusBarItem.remoteBackground": "{{blue}}",
+    "statusBarItem.remoteForeground": "{{background}}",
+    "statusBarItem.hoverBackground": "{{very_dark}}",
+    "notifications.background": "{{background_two}}",
+    "notifications.border": "{{very_dark}}",
+    "notificationCenterHeader.background": "{{background_two}}",
+    "quickInput.background": "{{background_two}}",
+    "quickInputList.focusBackground": "{{selection_primary}}",
+    "pickerGroup.foreground": "{{bright_blue}}",
+    "pickerGroup.border": "{{very_dark}}",
+
+    "terminal.background": "{{background}}",
+    "terminal.foreground": "{{foreground}}",
+    "terminalCursor.foreground": "{{cursor_color}}",
+    "terminal.selectionBackground": "{{selection_primary}}",
+    "terminal.ansiBlack": "{{black}}",
+    "terminal.ansiRed": "{{red}}",
+    "terminal.ansiGreen": "{{green}}",
+    "terminal.ansiYellow": "{{yellow}}",
+    "terminal.ansiBlue": "{{blue}}",
+    "terminal.ansiMagenta": "{{magenta}}",
+    "terminal.ansiCyan": "{{cyan}}",
+    "terminal.ansiWhite": "{{white}}",
+    "terminal.ansiBrightBlack": "{{bright_black}}",
+    "terminal.ansiBrightRed": "{{bright_red}}",
+    "terminal.ansiBrightGreen": "{{bright_green}}",
+    "terminal.ansiBrightYellow": "{{bright_yellow}}",
+    "terminal.ansiBrightBlue": "{{bright_blue}}",
+    "terminal.ansiBrightMagenta": "{{bright_magenta}}",
+    "terminal.ansiBrightCyan": "{{bright_cyan}}",
+    "terminal.ansiBrightWhite": "{{bright_white}}"
+  },
+  "tokenColors": [
+    { "scope": ["comment", "punctuation.definition.comment", "comment.block.documentation"], "settings": { "foreground": "{{black}}", "fontStyle": "italic" } },
+    { "scope": ["keyword", "storage", "storage.type", "storage.modifier", "keyword.control", "keyword.operator.new", "keyword.operator.expression", "variable.language"], "settings": { "foreground": "{{bright_red}}" } },
+    { "scope": ["storage.type.function.arrow"], "settings": { "foreground": "{{foreground}}" } },
+    { "scope": ["keyword.operator", "punctuation", "meta.brace", "variable", "variable.other", "variable.parameter", "meta.object-literal.key", "support.variable.property"], "settings": { "foreground": "{{foreground}}" } },
+    { "scope": ["keyword.control.directive", "meta.preprocessor", "entity.name.function.preprocessor", "punctuation.special"], "settings": { "foreground": "{{bright_orange}}" } },
+    { "scope": ["string", "string.quoted", "string.template", "punctuation.definition.string"], "settings": { "foreground": "{{bright_green}}" } },
+    { "scope": ["string.regexp", "constant.character", "constant.character.escape", "constant.other.symbol"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["constant.numeric", "constant.numeric.decimal"], "settings": { "foreground": "{{bright_blue}}" } },
+    { "scope": ["constant.language.boolean"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["constant", "constant.language", "variable.other.constant", "variable.other.enummember"], "settings": { "foreground": "{{bright_magenta}}" } },
+    { "scope": ["entity.name.type", "entity.name.class", "entity.other.inherited-class", "support.type", "support.class", "storage.type.primitive", "support.type.primitive", "entity.name.namespace"], "settings": { "foreground": "{{bright_blue}}" } },
+    { "scope": ["entity.name.function", "meta.function-call", "support.function", "entity.name.method", "meta.decorator", "entity.other.attribute-name"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["support.function.builtin", "support.function.console", "support.function.math"], "settings": { "foreground": "{{magenta}}" } },
+    { "scope": ["entity.name.tag", "punctuation.definition.tag"], "settings": { "foreground": "{{bright_magenta}}" } },
+    { "scope": ["entity.name.label"], "settings": { "foreground": "{{magenta}}" } },
+    { "scope": ["markup.heading", "entity.name.section"], "settings": { "foreground": "{{bright_green}}", "fontStyle": "bold" } },
+    { "scope": ["markup.bold"], "settings": { "foreground": "{{bright_yellow}}", "fontStyle": "bold" } },
+    { "scope": ["markup.italic"], "settings": { "foreground": "{{bright_yellow}}", "fontStyle": "italic" } },
+    { "scope": ["markup.strikethrough"], "settings": { "fontStyle": "strikethrough" } },
+    { "scope": ["markup.underline.link", "string.other.link"], "settings": { "foreground": "{{bright_blue}}" } },
+    { "scope": ["markup.inline.raw", "markup.fenced_code", "markup.raw"], "settings": { "foreground": "{{bright_magenta}}" } },
+    { "scope": ["markup.quote"], "settings": { "foreground": "{{bright_green}}" } },
+    { "scope": ["markup.list", "punctuation.definition.list.begin"], "settings": { "foreground": "{{bright_red}}" } },
+    { "scope": ["markup.inserted", "meta.diff.header.to-file"], "settings": { "foreground": "{{bright_green}}" } },
+    { "scope": ["markup.deleted", "meta.diff.header.from-file"], "settings": { "foreground": "{{bright_red}}" } },
+    { "scope": ["markup.changed"], "settings": { "foreground": "{{bright_yellow}}" } },
+    { "scope": ["invalid", "invalid.illegal"], "settings": { "foreground": "{{bright_red}}" } }
+  ],
+  "semanticTokenColors": {
+    "namespace": "{{foreground}}",
+    "class": "{{bright_blue}}",
+    "interface": "{{bright_blue}}",
+    "enum": "{{bright_blue}}",
+    "type": "{{bright_blue}}",
+    "typeParameter": "{{bright_magenta}}",
+    "enumMember": "{{bright_yellow}}",
+    "function": "{{bright_yellow}}",
+    "method": "{{bright_yellow}}",
+    "function.defaultLibrary": "{{magenta}}",
+    "macro": "{{bright_orange}}",
+    "variable": "{{foreground}}",
+    "variable.readonly": "{{foreground}}",
+    "variable.defaultLibrary": "{{bright_red}}",
+    "parameter": "{{foreground}}",
+    "property": "{{foreground}}",
+    "decorator": "{{bright_yellow}}",
+    "keyword": "{{bright_red}}",
+    "number": "{{bright_blue}}",
+    "string": "{{bright_green}}",
+    "regexp": "{{bright_yellow}}",
+    "comment": { "foreground": "{{black}}", "italic": true }
+  }
+}
+endef
+
+# VS Code gets its own screenshot script too. It runs a separate copy of
+# VS Code with its own user data and extensions folders, so Darkstar is the
+# only extension and your own settings aren't touched.
+#
+# Arguments: output file, window width and height in points.
+define vscode_screenshot_sh
+set -e
+out="$PWD/$1"; width="$2"; height="$3"
+darkstar="$PWD"
+dir=$(mktemp -d /tmp/vscode.XXXX)
+trap 'rm -rf "$dir"' EXIT
+
+mkdir -p "$dir/user/User" "$dir/extensions"
+ln -s "$darkstar/vscode" "$dir/extensions/henrycatalinismith.darkstar-0.1.0"
+cat > "$dir/user/User/settings.json" <<'JSON'
+{
+  "workbench.colorTheme": "Darkstar",
+  "workbench.startupEditor": "none",
+  "workbench.tips.enabled": false,
+  "workbench.enableExperiments": false,
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "chat.disableAIFeatures": true,
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "none",
+  "extensions.autoCheckUpdates": false,
+  "extensions.ignoreRecommendations": true,
+  "security.workspace.trust.enabled": false,
+  "git.openRepositoryInParentFolders": "never",
+  "editor.minimap.enabled": false,
+  "editor.stickyScroll.enabled": false,
+  "editor.bracketPairColorization.enabled": false,
+  "git.blame.statusBarItem.enabled": false,
+  "editor.cursorBlinking": "solid",
+  "editor.fontSize": 14,
+  "window.zoomLevel": 0,
+  "window.restoreWindows": "none",
+  "window.commandCenter": false
+}
+JSON
+
+"/Applications/Visual Studio Code.app/Contents/MacOS/Code" \
+  --user-data-dir "$dir/user" --extensions-dir "$dir/extensions" \
+  --new-window --disable-workspace-trust \
+  "$darkstar/repo" --goto "$darkstar/repo/src/cart.ts:24" > /dev/null 2>&1 &
+pid=$!
+
+window=
+for i in $(seq 75); do
+  window=$(osascript -l JavaScript -e "$WINDOW_ID_JS" "$pid")
+  [ -n "$window" ] && break
+  sleep 0.2
+done
+if [ -z "$window" ]; then
+  echo "couldn't find the VS Code window" >&2
+  kill "$pid"
+  exit 1
+fi
+
+osascript -e "tell application \"System Events\" to tell (first process whose unix id is $pid) to set size of window 1 to {$width, $height}" > /dev/null 2>&1 ||
+  echo "couldn't resize the VS Code window: does this terminal have Accessibility permission?" >&2
+
+sleep 5
+screencapture -x -o -l "$window" "$out" || {
+  echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
+  kill "$pid"
+  exit 1
+}
+kill "$pid"
+wait "$pid" 2>/dev/null || true
+endef
+
 export PALETTE := $(value palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
@@ -1681,3 +2070,6 @@ export ZELLIJ := $(value zellij)
 export ZELLIJ_SCENE := $(value zellij_scene)
 export ZED := $(value zed)
 export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
+export VSCODE_PACKAGE := $(value vscode_package)
+export VSCODE_THEME := $(value vscode_theme)
+export VSCODE_SCREENSHOT_SH := $(value vscode_screenshot_sh)

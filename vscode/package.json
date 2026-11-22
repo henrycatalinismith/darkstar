@@ -1,0 +1,25 @@
+{
+  "name": "darkstar",
+  "displayName": "Darkstar",
+  "description": "Solarized without the contrast bugs",
+  "version": "0.1.0",
+  "publisher": "henrycatalinismith",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henrycatalinismith/darkstar"
+  },
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": ["Themes"],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Darkstar",
+        "uiTheme": "vs-dark",
+        "path": "./darkstar-color-theme.json"
+      }
+    ]
+  }
+}
