@@ -74,18 +74,16 @@ THEMES := darkstar lightstar
 OUTPUTS := \
 	$(THEMES:%=ghostty/%.toml) \
 	$(THEMES:%=helix/%.toml) \
-	$(THEMES:%=lazygit/%.yml) \
 	$(THEMES:%=nvim/colors/%.lua) \
 	$(THEMES:%=zellij/%.kdl) \
 	$(THEMES:%=zed/%.json) \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) opencode/darkstar.json
+all: $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
-lazygit/%.yml: TEMPLATE = LAZYGIT
 nvim/colors/%.lua: TEMPLATE = NVIM
 zellij/%.kdl: TEMPLATE = ZELLIJ
 zed/%.json: TEMPLATE = ZED
@@ -99,6 +97,18 @@ theme = $(firstword $(subst -, ,$(basename $(notdir $@))))
 $(OUTPUTS): makefile
 	@mkdir -p $(@D)
 	@printf '%s\n' "$$$(TEMPLATE)" | PALETTE="$$PALETTE_$(theme)" awk "$$RENDER_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
+# Lazygit picks gui.darkTheme or gui.lightTheme from the terminal's
+# background, so this one file holds Darkstar's palette as the dark theme
+# and Lightstar's as the light.
+lazygit/darkstar.yml: makefile
+	@mkdir -p $(@D)
+	@{ echo 'gui:'; \
+		echo '  darkTheme:'; printf '%s\n' "$$LAZYGIT" | PALETTE="$$PALETTE_darkstar" awk "$$RENDER_AWK" && \
+		echo '  lightTheme:'; printf '%s\n' "$$LAZYGIT" | PALETTE="$$PALETTE_lightstar" awk "$$RENDER_AWK"; \
+	} > $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv $@.tmp $@
 	@echo "  $@"
 
@@ -134,17 +144,17 @@ install: all
 	for t in $(THEMES); do \
 		install -m 644 ghostty/$$t.toml ~/.config/ghostty/themes/$$t.toml && \
 		install -m 644 helix/$$t.toml ~/.config/helix/themes/$$t.toml && \
-		install -m 644 lazygit/$$t.yml ~/.config/lazygit/$$t.yml && \
 		install -m 644 nvim/colors/$$t.lua ~/.config/nvim/colors/$$t.lua && \
 		install -m 644 zellij/$$t.kdl ~/.config/zellij/themes/$$t.kdl && \
 		install -m 644 zed/$$t.json ~/.config/zed/themes/$$t.json && \
 		install -m 644 vscode/$$t-color-theme.json $(VSCODE_EXTENSION)/$$t-color-theme.json || exit 1; \
 	done
+	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) opencode/darkstar.json
+	rm -f $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -182,7 +192,7 @@ screenshots/%/helix.png: ghostty/%.toml helix/%.toml repo makefile
 screenshots/%/lazygit.png: SCENE = LAZYGIT_SCENE
 screenshots/%/lazygit.png: TITLE = Lazygit
 screenshots/%/lazygit.png: WAIT = 3
-screenshots/%/lazygit.png: ghostty/%.toml lazygit/%.yml repo makefile
+screenshots/%/lazygit.png: ghostty/%.toml lazygit/darkstar.yml repo makefile
 	$(terminal_screenshot)
 
 screenshots/%/nvim.png: SCENE = NVIM_SCENE
@@ -674,8 +684,6 @@ selection-foreground = {{selection_foreground}}
 endef
 
 define lazygit
-gui:
-  theme:
     activeBorderColor:
       - "{{foreground}}"
       - bold
@@ -1064,7 +1072,7 @@ EOF
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 cd "$DARKSTAR/repo"
 exec lazygit -ucd "$SCENE_DIR/lazygit" \
-  -ucf "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/$THEME.yml"
+  -ucf "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/darkstar.yml"
 endef
 
 define opencode

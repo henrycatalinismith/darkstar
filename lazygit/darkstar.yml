@@ -1,5 +1,5 @@
 gui:
-  theme:
+  darkTheme:
     activeBorderColor:
       - "#d4e5ea"
       - bold
@@ -11,3 +11,15 @@ gui:
       - "#002b36"
     inactiveViewSelectedLineBgColor:
       - "#002029"
+  lightTheme:
+    activeBorderColor:
+      - "#1b282d"
+      - bold
+    inactiveBorderColor:
+      - "#7f979f"
+    selectedLineFgColor:
+      - default
+    selectedLineBgColor:
+      - "#deedee"
+    inactiveViewSelectedLineBgColor:
+      - "#e9f3f0"
