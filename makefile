@@ -80,7 +80,7 @@ OUTPUTS := \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json
+all: $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/darkstar.xpi
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
@@ -123,6 +123,26 @@ opencode/darkstar.json: makefile
 	@mv $@.tmp $@
 	@echo "  $@"
 
+# Firefox themes are add-ons. Like OpenCode, one add-on holds both modes and
+# Firefox picks between them from the system's light or dark setting. Firefox
+# has no themes folder to copy this into, so make install skips it. Load
+# firefox/manifest.json from about:debugging to try it, or sign
+# firefox/darkstar.xpi at addons.mozilla.org to install it for good.
+firefox/manifest.json: makefile
+	@mkdir -p $(@D)
+	@{ printf '%s\n' "$$FIREFOX"; \
+		echo '  "theme": {'; printf '%s\n' "$$FIREFOX_COLORS" | PALETTE="$$PALETTE_lightstar" awk "$$RENDER_AWK" && echo '  },'; \
+		echo '  "dark_theme": {'; printf '%s\n' "$$FIREFOX_COLORS" | PALETTE="$$PALETTE_darkstar" awk "$$RENDER_AWK" && echo '  }'; \
+		echo '}'; \
+	} > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
+firefox/darkstar.xpi: firefox/manifest.json
+	@rm -f $@
+	@cd firefox && zip -q -X darkstar.xpi manifest.json
+	@echo "  $@"
+
 check:
 	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=1 "$$CHECK_AWK" || exit 1; done
 
@@ -154,7 +174,7 @@ install: all
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json
+	rm -f $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -2521,6 +2541,67 @@ kill "$pid"
 wait "$pid" 2>/dev/null || true
 endef
 
+# Firefox applies "theme" normally and "dark_theme" when the system is in
+# dark mode, so Lightstar goes in the first and Darkstar in the second.
+define firefox
+{
+  "manifest_version": 2,
+  "name": "Darkstar",
+  "description": "Solarized without the contrast bugs",
+  "version": "0.1.0",
+  "author": "Henry Catalini Smith",
+  "homepage_url": "https://github.com/henrycatalinismith/darkstar",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "darkstar@henrycatalinismith.se",
+      "strict_min_version": "68.0"
+    }
+  },
+endef
+
+define firefox_colors
+    "colors": {
+      "frame": "{{background_two}}",
+      "frame_inactive": "{{background_two}}",
+      "tab_background_text": "{{bright_black}}",
+      "tab_selected": "{{background}}",
+      "tab_text": "{{foreground}}",
+      "tab_line": "{{blue}}",
+      "tab_loading": "{{blue}}",
+      "tab_background_separator": "{{very_dark}}",
+      "toolbar": "{{background}}",
+      "toolbar_text": "{{foreground}}",
+      "toolbar_top_separator": "{{very_dark}}",
+      "toolbar_bottom_separator": "{{very_dark}}",
+      "toolbar_vertical_separator": "{{very_dark}}",
+      "toolbar_field": "{{background_two}}",
+      "toolbar_field_text": "{{foreground}}",
+      "toolbar_field_border": "{{very_dark}}",
+      "toolbar_field_focus": "{{background_two}}",
+      "toolbar_field_text_focus": "{{foreground}}",
+      "toolbar_field_border_focus": "{{blue}}",
+      "toolbar_field_highlight": "{{selection_primary}}",
+      "toolbar_field_highlight_text": "{{foreground}}",
+      "toolbar_field_separator": "{{very_dark}}",
+      "button_background_hover": "{{surface}}",
+      "button_background_active": "{{selection_primary}}",
+      "icons": "{{foreground}}",
+      "icons_attention": "{{bright_blue}}",
+      "popup": "{{background_two}}",
+      "popup_text": "{{foreground}}",
+      "popup_border": "{{very_dark}}",
+      "popup_highlight": "{{selection_primary}}",
+      "popup_highlight_text": "{{foreground}}",
+      "sidebar": "{{background_two}}",
+      "sidebar_text": "{{foreground}}",
+      "sidebar_border": "{{very_dark}}",
+      "sidebar_highlight": "{{selection_primary}}",
+      "sidebar_highlight_text": "{{foreground}}",
+      "ntp_background": "{{background}}",
+      "ntp_text": "{{foreground}}"
+    }
+endef
+
 export PALETTE_darkstar := $(value darkstar_palette)
 export PALETTE_lightstar := $(value lightstar_palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
@@ -2547,3 +2628,5 @@ export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
 export VSCODE_PACKAGE := $(value vscode_package)
 export VSCODE_THEME := $(value vscode_theme)
 export VSCODE_SCREENSHOT_SH := $(value vscode_screenshot_sh)
+export FIREFOX := $(value firefox)
+export FIREFOX_COLORS := $(value firefox_colors)

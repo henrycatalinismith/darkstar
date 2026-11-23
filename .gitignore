@@ -1,3 +1,4 @@
 /repo/
 .DS_Store
 /screenshots/
+/firefox/*.xpi
