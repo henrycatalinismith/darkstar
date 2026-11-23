@@ -193,9 +193,10 @@ chrome/%/icon.png: makefile
 			$@
 	@echo "  $@"
 
-# make chrome-store builds what the Chrome Web Store asks for: a zip of each
-# theme, and a 1280×800 screenshot of each with square corners.
-chrome-store: $(THEMES:%=chrome/%.zip) $(THEMES:%=screenshots/chrome-store/%.png)
+# make chrome-store builds what the Chrome Web Store asks for: a zip of the
+# theme and a 1280×800 screenshot with square corners. Only Darkstar is
+# published there. Lightstar stays as a folder to load unpacked.
+chrome-store: chrome/darkstar.zip screenshots/chrome-store/darkstar.png
 
 chrome/%.zip: chrome/%/manifest.json chrome/%/icon.png
 	@rm -f $@
