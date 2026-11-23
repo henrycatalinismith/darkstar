@@ -1,0 +1,7 @@
+id = "darkstar-theme"
+name = "Darkstar – Deep Space Colour Palette"
+version = "0.1.0"
+schema_version = 1
+authors = ["Henry Catalini Smith <henry.catalinismith.se>"]
+description = "Deep space colour palette"
+repository = "https://github.com/henrycatalinismith/darkstar"

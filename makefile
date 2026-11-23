@@ -75,16 +75,14 @@ OUTPUTS := \
 	$(THEMES:%=ghostty/%.toml) \
 	$(THEMES:%=helix/%.toml) \
 	$(THEMES:%=zellij/%.kdl) \
-	$(THEMES:%=zed/%.json) \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) vscode/LICENSE lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+all: $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
 zellij/%.kdl: TEMPLATE = ZELLIJ
-zed/%.json: TEMPLATE = ZED
 vscode/package.json: TEMPLATE = VSCODE_PACKAGE
 vscode/%-color-theme.json: TEMPLATE = VSCODE_THEME
 
@@ -124,6 +122,19 @@ nvim/colors/darkstar.lua: makefile
 		printf '%s\n' "$$NVIM_PALETTE" | PALETTE="$$PALETTE_darkstar" awk "$$RENDER_AWK" && \
 		printf '%s\n' "$$NVIM_PALETTE" | PALETTE="$$PALETTE_lightstar" awk "$$RENDER_AWK" && \
 		printf '%s\n' "$$NVIM_GROUPS"; \
+	} > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
+# Zed theme files hold a family of themes, so this one holds both Darkstar
+# and Lightstar. It lives in zed/themes/ because zed/ is also a Zed
+# extension, published from this repo with path = "zed".
+zed/themes/darkstar.json: makefile
+	@mkdir -p $(@D)
+	@{ printf '%s\n' "$$ZED"; \
+		printf '%s\n' "$$ZED_THEME" | PALETTE="$$PALETTE_darkstar" awk "$$RENDER_AWK" | sed '$$s/$$/,/' && \
+		printf '%s\n' "$$ZED_THEME" | PALETTE="$$PALETTE_lightstar" awk "$$RENDER_AWK" && \
+		printf '  ]\n}\n'; \
 	} > $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv $@.tmp $@
 	@echo "  $@"
@@ -192,16 +203,16 @@ install: all
 		install -m 644 ghostty/$$t.toml ~/.config/ghostty/themes/$$t.toml && \
 		install -m 644 helix/$$t.toml ~/.config/helix/themes/$$t.toml && \
 		install -m 644 zellij/$$t.kdl ~/.config/zellij/themes/$$t.kdl && \
-		install -m 644 zed/$$t.json ~/.config/zed/themes/$$t.json && \
 		install -m 644 vscode/$$t-color-theme.json $(VSCODE_EXTENSION)/$$t-color-theme.json || exit 1; \
 	done
 	install -m 644 lazygit/darkstar.yml ~/.config/lazygit/darkstar.yml
 	install -m 644 nvim/colors/darkstar.lua ~/.config/nvim/colors/darkstar.lua
+	install -m 644 zed/themes/darkstar.json ~/.config/zed/themes/darkstar.json
 	install -m 644 opencode/darkstar.json ~/.config/opencode/themes/darkstar.json
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) vscode/LICENSE lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+	rm -f $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -272,7 +283,7 @@ screenshots/readme/%.webp: ghostty/%.toml helix/%.toml lazygit/darkstar.yml open
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
 # Ghostty windows above.
-screenshots/zed/%.webp: zed/%.json repo makefile
+screenshots/zed/%.webp: zed/themes/darkstar.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
 	@echo "  $@"
@@ -2088,9 +2099,12 @@ endef
 define zed
 {
   "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
-  "name": "{{title}}",
+  "name": "Darkstar",
   "author": "Henry Catalini Smith",
   "themes": [
+endef
+
+define zed_theme
     {
       "name": "{{title}}",
       "appearance": "{{appearance}}",
@@ -2261,8 +2275,6 @@ define zed
         }
       }
     }
-  ]
-}
 endef
 
 
@@ -2280,7 +2292,7 @@ dir=$(mktemp -d /tmp/zed.XXXX)
 trap 'rm -rf "$dir"' EXIT
 
 mkdir -p "$dir/config/themes"
-cp "$darkstar/zed/$THEME.json" "$dir/config/themes/"
+cp "$darkstar/zed/themes/darkstar.json" "$dir/config/themes/"
 cat > "$dir/config/settings.json" <<JSON
 {
   "theme": { "mode": "system", "dark": "$title", "light": "$title" },
@@ -2954,6 +2966,7 @@ export ZELLIJ := $(value zellij)
 export ZELLIJ_SCENE := $(value zellij_scene)
 export README_SCENE := $(value readme_scene)
 export ZED := $(value zed)
+export ZED_THEME := $(value zed_theme)
 export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
 export VSCODE_PACKAGE := $(value vscode_package)
 export VSCODE_THEME := $(value vscode_theme)
