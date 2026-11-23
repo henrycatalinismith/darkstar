@@ -7,6 +7,7 @@
 #   make install  copy the theme files into ~/.config
 #   make repo     build ./repo, a test git repo with fixed dates
 #   make screenshots  capture each app in Ghostty (macOS only)
+#   make gh-pages publish index.html and screenshots/ to the gh-pages branch
 #   make clean    delete the rendered theme files and ./repo
 #
 # Everything lives in this file: the palettes, the templates for each app
@@ -358,19 +359,19 @@ screenshots/firefox/%.webp: firefox/manifest.json makefile
 	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
 
-.PHONY: all check palette swatches install clean screenshots publish-screenshots chrome-store
+.PHONY: all check palette swatches install clean screenshots gh-pages chrome-store
 
-# Publishes screenshots/ to the gh-pages branch as a single commit that
-# replaces whatever was there, so old screenshots never pile up in history.
-# Images are then at
+# Publishes index.html and screenshots/ to the gh-pages branch as a single
+# commit that replaces whatever was there, so old screenshots never pile up
+# in history. Images are then at
 # https://raw.githubusercontent.com/henrycatalinismith/darkstar/gh-pages/<app>/<theme>.webp
-publish-screenshots:
+gh-pages: swatches
 	@test -d screenshots || { echo "No screenshots/ to publish. Run make screenshots first."; exit 1; }
 	@remote=$$(git remote get-url origin) && tmp=$$(mktemp -d) && \
-		cp -R screenshots/ "$$tmp/" && touch "$$tmp/.nojekyll" && \
+		cp -R screenshots/ "$$tmp/" && cp index.html "$$tmp/" && touch "$$tmp/.nojekyll" && \
 		git -C "$$tmp" init -q -b gh-pages && \
 		git -C "$$tmp" add -A && \
-		git -C "$$tmp" commit -q -m "Screenshots" && \
+		git -C "$$tmp" commit -q -m "Publish" && \
 		git -C "$$tmp" push -q -f "$$remote" gh-pages && \
 		rm -rf "$$tmp"
 	@echo "  gh-pages"
@@ -761,53 +762,32 @@ endef
 # text in their own colour and tints and surfaces as filled cells, with the
 # hex value, contrast against the background and OKLCH value in each.
 define swatch_awk
-function oklch(c,   r, g, b, l, m, s, L, A, B, h) {
-  r = linear(channel(c, 2)); g = linear(channel(c, 4)); b = linear(channel(c, 6))
-  l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ^ (1 / 3)
-  m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ^ (1 / 3)
-  s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ^ (1 / 3)
-  L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
-  A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
-  B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
-  h = atan2(B, A) * 180 / 3.14159265358979
-  if (h < 0) h += 360
-  return sprintf("oklch(%.3f %.3f %.0f)", L, sqrt(A * A + B * B), h)
-}
-
-function label(x, y, text, fill) {
-  printf "<text x=\"%d\" y=\"%d\" fill=\"%s\">%s</text>\n", x, y, fill, text
-}
-
 BEGIN {
   n = split("gray red orange yellow green cyan blue magenta surface", families, " ")
   bg = colour("background")
   fg = colour("foreground")
-  left = 24; top = 24; head = 100; cw = 200; ch = 72
-  width = left * 2 + head + cw * 8
-  height = top * 2 + 50 + 30 + ch * n
-  printf "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" font-family=\"Lilex, monospace\" font-size=\"13\">\n", width, height
+  ring = colour("appearance") == "light" ? 0.12 : 0.15
+  size = 43; gap = 12; radius = 9.5; width = 912
+  grid = size * n + gap * (n - 1)
+  height = size * 8 + gap * 7
+  left = (width - grid) / 2
+  printf "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">\n", width, height, width, height
+  print "<defs>"
+  print "<linearGradient id=\"horizon\">"
+  printf "<stop offset=\"0\" stop-color=\"%s\" stop-opacity=\"0\"/>\n", fg
+  printf "<stop offset=\"0.2\" stop-color=\"%s\" stop-opacity=\"%s\"/>\n", fg, ring
+  printf "<stop offset=\"0.8\" stop-color=\"%s\" stop-opacity=\"%s\"/>\n", fg, ring
+  printf "<stop offset=\"1\" stop-color=\"%s\" stop-opacity=\"0\"/>\n", fg
+  print "</linearGradient>"
+  print "</defs>"
   printf "<rect width=\"100%%\" height=\"100%%\" fill=\"%s\"/>\n", bg
-  printf "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-size=\"24\" font-weight=\"bold\">%s</text>\n", left, top + 26, fg, colour("title")
-  y = top + 50 + 20
-  for (s = 1; s <= 8; s++) label(left + head + (s - 1) * cw + 8, y, s "00", fg)
-  for (row = 1; row <= n; row++) {
-    fam = families[row]
-    y = top + 50 + 30 + (row - 1) * ch
-    label(left, y + 40, fam, fg)
+  printf "<rect y=\"%s\" width=\"%d\" height=\"1\" fill=\"url(#horizon)\"/>\n", height / 2 - 0.5, width
+  for (col = 1; col <= n; col++) {
     for (s = 1; s <= 8; s++) {
-      c = colour(fam s "00")
-      x = left + head + (s - 1) * cw
-      text = c
-      if (fam == "surface") text = fg
-      else if (fam != "gray" && s > 4) text = colour(fam "200")
-      if (text == c) {
-        printf "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"8\" fill=\"%s\"/>\n", x + 4, y + 4, cw - 8, c
-      } else {
-        printf "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>\n", x + 4, y + 4, cw - 8, ch - 8, c
-      }
-      label(x + 10, y + 28, c, text)
-      label(x + 10, y + 44, sprintf("%.2f:1", contrast(c, bg)), text)
-      label(x + 10, y + 60, oklch(c), text)
+      x = left + (col - 1) * (size + gap)
+      y = (s - 1) * (size + gap)
+      printf "<rect x=\"%s\" y=\"%d\" width=\"%d\" height=\"%d\" rx=\"%s\" fill=\"%s\"/>\n", x, y, size, size, radius, colour(families[col] s "00")
+      printf "<rect x=\"%s\" y=\"%s\" width=\"%d\" height=\"%d\" rx=\"%s\" fill=\"none\" stroke=\"%s\" stroke-opacity=\"%s\"/>\n", x + 0.5, y + 0.5, size - 1, size - 1, radius - 0.5, fg, ring
     }
   }
   print "</svg>"

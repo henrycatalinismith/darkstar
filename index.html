@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Darkstar</title>
+  <meta name="description" content="Deep space colour palette" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lilex:wght@400;700&display=swap" rel="stylesheet" />
+  <script>
+    const saved = localStorage.getItem("theme");
+    const system = matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+    document.documentElement.dataset.theme = saved || system;
+  </script>
+  <style>
+    :root,
+    [data-theme="dark"] {
+      --bg: #05181d;
+      --bg-alt: #002b36;
+      --fg: #d4e5ea;
+      --muted: #87979c;
+      --red: #ff776b;
+      --green: #95ab07;
+      --yellow: #ca9a01;
+      --heading: #ecb93b;
+      --blue: #39a8f8;
+      --magenta: #ff6ead;
+      --cyan: #2ab3a8;
+      --ring: rgb(212 229 234 / 0.15);
+      --ring-faint: rgb(212 229 234 / 0.07);
+      --shadow:
+        0 0 0 1px var(--ring), 0 0 0 5px var(--bg), 0 0 0 6px var(--ring);
+      color-scheme: dark;
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f8f1;
+      --bg-alt: #deedee;
+      --fg: #1b282d;
+      --muted: #526165;
+      --red: #e40018;
+      --green: #517e03;
+      --yellow: #906c04;
+      --heading: #0a7f78;
+      --blue: #0676ba;
+      --magenta: #db0381;
+      --cyan: #0a7f78;
+      --ring: rgb(27 40 45 / 0.12);
+      --ring-faint: rgb(27 40 45 / 0.06);
+      --shadow:
+        0 0 0 1px var(--ring), 0 0 0 5px var(--bg), 0 0 0 6px var(--ring);
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font:
+        16px/1.7 "Lilex",
+        ui-monospace,
+        monospace;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 10rem 1.5rem;
+    }
+
+    .page__title {
+      text-align: center;
+      margin: 6rem 0 0;
+      font-size: clamp(2.5rem, 8vw, 4rem);
+      line-height: 1.1;
+      color: var(--fg);
+    }
+
+    .page__tagline {
+      text-align: center;
+      margin: -0.4rem 0 10rem;
+      line-height: 1.2;
+      color: var(--muted);
+      font-size: 1.25rem;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      font: inherit;
+      color: var(--fg);
+      background: var(--bg-alt);
+      border: 1px solid var(--muted);
+      border-radius: 999px;
+      padding: 0.25rem 0.9rem;
+      cursor: pointer;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--magenta);
+    }
+
+    .screenshot {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      background: var(--bg-alt);
+      box-shadow: var(--shadow);
+    }
+
+    .screenshot--small {
+      aspect-ratio: 1966 / 1296;
+      object-fit: cover;
+      object-position: top;
+      border-radius: 4px;
+      box-shadow:
+        0 0 0 1px var(--ring-faint),
+        0 0 0 5px var(--bg),
+        0 0 0 6px var(--ring-faint);
+    }
+
+    .intro {
+      max-width: 72ch;
+      margin: 10rem auto;
+      text-align: center;
+    }
+
+    .intro__text {
+      margin: 0;
+      font-size: 1.25rem;
+      line-height: 1.6;
+    }
+
+    .prose {
+      max-width: 65ch;
+      margin: 10rem 0;
+    }
+
+    .prose__heading {
+      color: var(--heading);
+      font-size: 1.1rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .prose__link {
+      color: var(--blue);
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin: 10rem 0;
+    }
+
+    .gallery__item {
+      margin: 0;
+    }
+
+    @media (max-width: 640px) {
+      .gallery {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    .swatch {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 10rem 0;
+    }
+
+    .repo-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--blue);
+      font-size: 1.25rem;
+      text-decoration: none;
+    }
+
+    .repo-link:hover {
+      text-decoration: underline;
+    }
+
+    .repo-link__icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <button class="theme-toggle" type="button" aria-label="Toggle colour scheme">
+    ☾ dark
+  </button>
+
+  <main class="page">
+    <img class="screenshot" data-shot="readme"
+      data-alt="A terminal split into four panes in the {theme} theme: Helix editing a TypeScript file, Lazygit showing a diff, OpenCode's start screen and a zsh prompt with a coloured git log graph" />
+
+    <h1 class="page__title">Darkstar</h1>
+    <p class="page__tagline">Deep space colour palette</p>
+
+    <section class="intro">
+      <p class="intro__text">
+        The familiarity and minimalism of Solarized without compromising on contrast and compatibility
+      </p>
+    </section>
+
+    <div class="gallery">
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="helix"
+          data-alt="Helix editing a TypeScript shopping cart module in the {theme} theme, with keywords, types, functions, numbers and an italic doc comment each in their own colour" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="zed"
+          data-alt="Zed in the {theme} theme with cart.ts open beside a project file tree, showing syntax highlighting and an inline git blame on the current line" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="lazygit"
+          data-alt="Lazygit in the {theme} theme showing a red and green diff of a test file, a file tree, local branches and a coloured commit graph" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="ghostty"
+          data-alt="Ghostty in the {theme} theme showing the 16 terminal colours by name, plus default, bold, italic, underlined and selected text" />
+      </figure>
+    </div>
+
+    <section class="intro">
+      <p class="intro__text">
+        Tailwind-style stepped colour palette with the flexibility modern devtool UIs require
+      </p>
+    </section>
+
+    <img class="swatch" data-swatch
+      data-alt="The {theme} palette: nine colour families from gray through red, orange, yellow, green, cyan, blue and magenta to surface, each stepping from light at the top to dark at the bottom" />
+
+    <section class="intro">
+      <p class="intro__text">
+        Packaged, tested, and ready to go for loads of terminal programs and GUI software
+      </p>
+    </section>
+
+    <div class="gallery">
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="nvim"
+          data-alt="Neovim in the {theme} theme editing the same TypeScript cart module, with a highlighted cursor line and a status line at the bottom" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="opencode"
+          data-alt="OpenCode's start screen in the {theme} theme, with its block-letter logo above a prompt box" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="zellij"
+          data-alt="Zellij in the {theme} theme with coloured tabs, a git log graph, a git status pane, a test pane and a keybinding bar along the bottom" />
+      </figure>
+      <figure class="gallery__item">
+        <img class="screenshot screenshot--small" data-shot="vscode"
+          data-alt="VS Code in the {theme} theme with cart.ts open, a file explorer showing git status colours and a status bar along the bottom" />
+      </figure>
+    </div>
+
+    <section class="intro">
+      <a class="repo-link" href="https://github.com/henrycatalinismith/darkstar">
+        <svg class="repo-link__icon" viewBox="0 0 16 16" aria-hidden="true">
+          <path fill="currentColor"
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+        </svg>
+        henrycatalinismith / darkstar
+      </a>
+    </section>
+  </main>
+
+  <script>
+    const base = "";
+    const button = document.querySelector(".theme-toggle");
+
+    function render() {
+      const theme = document.documentElement.dataset.theme;
+      const variant = theme === "light" ? "lightstar" : "darkstar";
+      for (const img of document.querySelectorAll("[data-shot]")) {
+        img.src = `${base}${img.dataset.shot}/${variant}.webp`;
+      }
+      for (const img of document.querySelectorAll("[data-swatch]")) {
+        img.src = `swatch/${variant}.svg`;
+      }
+      const name = variant[0].toUpperCase() + variant.slice(1);
+      for (const img of document.querySelectorAll("[data-alt]")) {
+        img.alt = img.dataset.alt.replace("{theme}", name);
+      }
+      button.textContent = theme === "light" ? "☀ light" : "☾ dark";
+    }
+
+    button.addEventListener("click", () => {
+      const next =
+        document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+
+</html>
