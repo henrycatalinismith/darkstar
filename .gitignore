@@ -5,3 +5,5 @@
 /vscode/*.vsix
 /vscode/LICENSE
 /chrome/*/Cached Theme.pak
+/chrome/*.zip
+/chrome/*/icon.png

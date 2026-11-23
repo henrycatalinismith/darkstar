@@ -78,7 +78,7 @@ OUTPUTS := \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+all: $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json) $(THEMES:%=chrome/%/icon.png)
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
@@ -181,6 +181,36 @@ chrome/%/manifest.json: makefile
 	@mv $@.tmp $@
 	@echo "  $@"
 
+# A sparkle in the theme's accent colour on a disc of its background, with a
+# thin outline so it shows up on both light and dark pages. Chrome wants a
+# 128×128 icon with the artwork inside the middle 112 pixels.
+chrome/%/icon.png: makefile
+	@mkdir -p $(@D)
+	@set -- $$(printf '{{background}} {{emphasis}} {{linenr}}\n' | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK") && \
+		magick -size 128x128 xc:none \
+			-fill "$$1" -stroke "$$3" -strokewidth 2 -draw 'circle 64,64 64,9' \
+			-fill "$$2" -stroke none -draw 'polygon 64,24 73,55 104,64 73,73 64,104 55,73 24,64 55,55' \
+			$@
+	@echo "  $@"
+
+# make chrome-store builds what the Chrome Web Store asks for: a zip of each
+# theme, and a 1280×800 screenshot of each with square corners.
+chrome-store: $(THEMES:%=chrome/%.zip) $(THEMES:%=screenshots/chrome-store/%.png)
+
+chrome/%.zip: chrome/%/manifest.json chrome/%/icon.png
+	@rm -f $@
+	@cd chrome/$* && zip -q -X ../$*.zip manifest.json icon.png
+	@echo "  $@"
+
+# The window screenshots have rounded, transparent corners, so this fills
+# them with the tab strip colour before cropping to the store's size.
+screenshots/chrome-store/%.png: screenshots/chrome/%.webp makefile
+	@mkdir -p $(@D)
+	@frame=$$(printf '{{tab_strip}}\n' | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK") && \
+		magick $< -background "$$frame" -flatten \
+			-resize 1280x800^ -gravity north -extent 1280x800 $@
+	@echo "  $@"
+
 check:
 	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=1 "$$CHECK_AWK" || exit 1; done
 
@@ -212,7 +242,7 @@ install: all
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+	rm -f $(OUTPUTS) vscode/LICENSE zed/themes/darkstar.json lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json) $(THEMES:%=chrome/%/icon.png) $(THEMES:%=chrome/%.zip)
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -293,7 +323,7 @@ screenshots/vscode/%.webp: vscode/package.json vscode/%-color-theme.json repo ma
 	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/chrome/%.webp: chrome/%/manifest.json makefile
+screenshots/chrome/%.webp: chrome/%/manifest.json chrome/%/icon.png makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$CHROME_SCREENSHOT_SH" chrome-screenshot $@ 983 664
 	@echo "  $@"
@@ -303,7 +333,7 @@ screenshots/firefox/%.webp: firefox/manifest.json makefile
 	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
 
-.PHONY: all check palette swatches install clean screenshots publish-screenshots
+.PHONY: all check palette swatches install clean screenshots publish-screenshots chrome-store
 
 # Publishes screenshots/ to the gh-pages branch as a single commit that
 # replaces whatever was there, so old screenshots never pile up in history.
@@ -2800,6 +2830,7 @@ define chrome
   "description": "Deep space colour palette",
   "version": "0.1.0",
   "homepage_url": "https://github.com/henrycatalinismith/darkstar",
+  "icons": { "128": "icon.png" },
   "theme": {
     "colors": {
       "frame": [{{rgb tab_strip}}],

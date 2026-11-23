@@ -4,6 +4,7 @@
   "description": "Deep space colour palette",
   "version": "0.1.0",
   "homepage_url": "https://github.com/henrycatalinismith/darkstar",
+  "icons": { "128": "icon.png" },
   "theme": {
     "colors": {
       "frame": [0, 17, 23],
