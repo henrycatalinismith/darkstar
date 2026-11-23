@@ -3,7 +3,7 @@
 #   make          render every app's theme file
 #   make check    fail if any colour is below its minimum contrast
 #   make palette  print every colour with its contrast ratio
-#   make swatches draw every colour into screenshots/<theme>/swatch.svg
+#   make swatches draw every colour into screenshots/swatch/<theme>.svg
 #   make install  copy the theme files into ~/.config
 #   make repo     build ./repo, a test git repo with fixed dates
 #   make screenshots  capture each app in Ghostty (macOS only)
@@ -79,7 +79,7 @@ OUTPUTS := \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+all: $(OUTPUTS) vscode/LICENSE lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
@@ -96,6 +96,11 @@ $(OUTPUTS): makefile
 	@mkdir -p $(@D)
 	@printf '%s\n' "$$$(TEMPLATE)" | PALETTE="$$PALETTE_$(theme)" awk "$$RENDER_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv $@.tmp $@
+	@echo "  $@"
+
+# vsce wants a licence file inside the extension folder.
+vscode/LICENSE: license
+	@cp license $@
 	@echo "  $@"
 
 # Lazygit picks gui.darkTheme or gui.lightTheme from the terminal's
@@ -171,9 +176,9 @@ check:
 palette:
 	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=0 "$$CHECK_AWK"; done
 
-swatches: $(THEMES:%=screenshots/%/swatch.svg)
+swatches: $(THEMES:%=screenshots/swatch/%.svg)
 
-screenshots/%/swatch.svg: makefile
+screenshots/swatch/%.svg: makefile
 	@mkdir -p $(@D)
 	@PALETTE="$$PALETTE_$*" awk "$$SWATCH_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv $@.tmp $@
@@ -196,7 +201,7 @@ install: all
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
+	rm -f $(OUTPUTS) vscode/LICENSE lazygit/darkstar.yml nvim/colors/darkstar.lua opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -205,8 +210,8 @@ repo: makefile
 	@sh -c "$$FIXTURE_SH"
 	@echo "  $@"
 
-# Screenshots go in screenshots/<theme>/<app>.png.
-SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(t)/$(a).png))
+# Screenshots go in screenshots/<app>/<theme>.png.
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).png))
 
 screenshots: $(SCREENSHOTS)
 
@@ -219,65 +224,80 @@ define terminal_screenshot
 @echo "  $@"
 endef
 
-screenshots/%/ghostty.png: SCENE = GHOSTTY_SCENE
-screenshots/%/ghostty.png: TITLE = Ghostty
-screenshots/%/ghostty.png: WAIT = 1
-screenshots/%/ghostty.png: ghostty/%.toml makefile
+screenshots/ghostty/%.png: SCENE = GHOSTTY_SCENE
+screenshots/ghostty/%.png: TITLE = Ghostty
+screenshots/ghostty/%.png: WAIT = 1
+screenshots/ghostty/%.png: ghostty/%.toml makefile
 	$(terminal_screenshot)
 
-screenshots/%/helix.png: SCENE = HELIX_SCENE
-screenshots/%/helix.png: TITLE = Helix
-screenshots/%/helix.png: WAIT = 2
-screenshots/%/helix.png: ghostty/%.toml helix/%.toml repo makefile
+screenshots/helix/%.png: SCENE = HELIX_SCENE
+screenshots/helix/%.png: TITLE = Helix
+screenshots/helix/%.png: WAIT = 2
+screenshots/helix/%.png: ghostty/%.toml helix/%.toml repo makefile
 	$(terminal_screenshot)
 
-screenshots/%/lazygit.png: SCENE = LAZYGIT_SCENE
-screenshots/%/lazygit.png: TITLE = Lazygit
-screenshots/%/lazygit.png: WAIT = 3
-screenshots/%/lazygit.png: ghostty/%.toml lazygit/darkstar.yml repo makefile
+screenshots/lazygit/%.png: SCENE = LAZYGIT_SCENE
+screenshots/lazygit/%.png: TITLE = Lazygit
+screenshots/lazygit/%.png: WAIT = 3
+screenshots/lazygit/%.png: ghostty/%.toml lazygit/darkstar.yml repo makefile
 	$(terminal_screenshot)
 
-screenshots/%/nvim.png: SCENE = NVIM_SCENE
-screenshots/%/nvim.png: TITLE = Neovim
-screenshots/%/nvim.png: WAIT = 2
-screenshots/%/nvim.png: ghostty/%.toml nvim/colors/darkstar.lua repo makefile
+screenshots/nvim/%.png: SCENE = NVIM_SCENE
+screenshots/nvim/%.png: TITLE = Neovim
+screenshots/nvim/%.png: WAIT = 2
+screenshots/nvim/%.png: ghostty/%.toml nvim/colors/darkstar.lua repo makefile
 	$(terminal_screenshot)
 
-screenshots/%/opencode.png: SCENE = OPENCODE_SCENE
-screenshots/%/opencode.png: TITLE = opencode
-screenshots/%/opencode.png: WAIT = 5
-screenshots/%/opencode.png: ghostty/%.toml opencode/darkstar.json repo makefile
+screenshots/opencode/%.png: SCENE = OPENCODE_SCENE
+screenshots/opencode/%.png: TITLE = opencode
+screenshots/opencode/%.png: WAIT = 5
+screenshots/opencode/%.png: ghostty/%.toml opencode/darkstar.json repo makefile
 	$(terminal_screenshot)
 
-screenshots/%/zellij.png: SCENE = ZELLIJ_SCENE
-screenshots/%/zellij.png: TITLE = Zellij
-screenshots/%/zellij.png: WAIT = 3
-screenshots/%/zellij.png: ghostty/%.toml zellij/%.kdl repo makefile
+screenshots/zellij/%.png: SCENE = ZELLIJ_SCENE
+screenshots/zellij/%.png: TITLE = Zellij
+screenshots/zellij/%.png: WAIT = 3
+screenshots/zellij/%.png: ghostty/%.toml zellij/%.kdl repo makefile
 	$(terminal_screenshot)
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
 # Ghostty windows above.
-screenshots/%/zed.png: zed/%.json repo makefile
+screenshots/zed/%.png: zed/%.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/%/vscode.png: vscode/package.json vscode/%-color-theme.json repo makefile
+screenshots/vscode/%.png: vscode/package.json vscode/%-color-theme.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/%/chrome.png: chrome/%/manifest.json makefile
+screenshots/chrome/%.png: chrome/%/manifest.json makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$CHROME_SCREENSHOT_SH" chrome-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/%/firefox.png: firefox/manifest.json makefile
+screenshots/firefox/%.png: firefox/manifest.json makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
 
-.PHONY: all check palette swatches install clean screenshots
+.PHONY: all check palette swatches install clean screenshots publish-screenshots
+
+# Publishes screenshots/ to the gh-pages branch as a single commit that
+# replaces whatever was there, so old screenshots never pile up in history.
+# Images are then at
+# https://raw.githubusercontent.com/henrycatalinismith/darkstar/gh-pages/<app>/<theme>.png
+publish-screenshots:
+	@test -d screenshots || { echo "No screenshots/ to publish. Run make screenshots first."; exit 1; }
+	@remote=$$(git remote get-url origin) && tmp=$$(mktemp -d) && \
+		cp -R screenshots/ "$$tmp/" && touch "$$tmp/.nojekyll" && \
+		git -C "$$tmp" init -q -b gh-pages && \
+		git -C "$$tmp" add -A && \
+		git -C "$$tmp" commit -q -m "Screenshots" && \
+		git -C "$$tmp" push -q -f "$$remote" gh-pages && \
+		rm -rf "$$tmp"
+	@echo "  gh-pages"
 
 # Name, hex value and the minimum contrast ratio against the background.
 # 4.5 is WCAG AA and 7 is WCAG AAA. A dash means the colour isn't used for

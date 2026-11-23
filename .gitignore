@@ -2,3 +2,6 @@
 .DS_Store
 /screenshots/
 /firefox/*.xpi
+/vscode/*.vsix
+/vscode/LICENSE
+/chrome/*/Cached Theme.pak
