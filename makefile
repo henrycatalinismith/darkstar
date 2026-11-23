@@ -181,15 +181,20 @@ chrome/%/manifest.json: makefile
 	@mv $@.tmp $@
 	@echo "  $@"
 
-# A sparkle in the theme's accent colour on a disc of its background, with a
-# thin outline so it shows up on both light and dark pages. Chrome wants a
+# A waxing crescent moon 🌒 in the theme's accent colour on a disc of its
+# background, with the unlit part of the moon showing faintly and a thin
+# outline so it shows up on both light and dark pages. Chrome wants a
 # 128×128 icon with the artwork inside the middle 112 pixels.
 chrome/%/icon.png: makefile
 	@mkdir -p $(@D)
-	@set -- $$(printf '{{background}} {{emphasis}} {{linenr}}\n' | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK") && \
+	@set -- $$(printf '{{background}} {{emphasis}} {{linenr}} {{very_dark}}\n' | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK") && \
 		magick -size 128x128 xc:none \
 			-fill "$$1" -stroke "$$3" -strokewidth 2 -draw 'circle 64,64 64,9' \
-			-fill "$$2" -stroke none -draw 'polygon 64,24 73,55 104,64 73,73 64,104 55,73 24,64 55,55' \
+			-stroke none -fill "$$4" -draw 'circle 64,64 102,64' \
+			\( -size 128x128 xc:none -fill "$$2" -draw 'circle 64,64 102,64' \
+				\( -size 128x128 xc:none -fill black -draw 'circle 50,64 88,64' \) \
+				-compose DstOut -composite \) \
+			-compose Over -composite \
 			$@
 	@echo "  $@"
 
