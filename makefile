@@ -2335,8 +2335,8 @@ endef
 
 define vscode_package
 {
-  "name": "darkstar",
-  "displayName": "Darkstar",
+  "name": "darkstar-deep-space-colour-palette",
+  "displayName": "Darkstar – Deep Space Colour Palette",
   "description": "Deep space colour palette",
   "version": "0.1.0",
   "publisher": "henrycatalinismith",
