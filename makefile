@@ -3,16 +3,16 @@
 #   make          render every app's theme file
 #   make check    fail if any colour is below its minimum contrast
 #   make palette  print every colour with its contrast ratio
+#   make swatches draw every colour into screenshots/<theme>/swatch.svg
 #   make install  copy the theme files into ~/.config
 #   make repo     build ./repo, a test git repo with fixed dates
 #   make screenshots  capture each app in Ghostty (macOS only)
 #   make clean    delete the rendered theme files and ./repo
 #
 # Everything lives in this file: the palettes, the templates for each app
-# and the awk that renders them. Templates use {{red}} and so on for a
-# palette colour and {{mix a b t}} for a blend of two colours, where t is how far
-# to move from a towards b. Each theme gets its own copy of every file,
-# rendered from the same templates with that theme's palette.
+# and the awk that renders them. Templates use {{red300}}, {{bright_red}}
+# and so on for a palette colour. Each theme gets its own copy of every
+# file, rendered from the same templates with that theme's palette.
 #
 # Design goals:
 #
@@ -119,6 +119,14 @@ check:
 palette:
 	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=0 "$$CHECK_AWK"; done
 
+swatches: $(THEMES:%=screenshots/%/swatch.svg)
+
+screenshots/%/swatch.svg: makefile
+	@mkdir -p $(@D)
+	@PALETTE="$$PALETTE_$*" awk "$$SWATCH_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
 VSCODE_EXTENSION := ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0
 
 install: all
@@ -207,142 +215,302 @@ screenshots/%/vscode.png: vscode/package.json vscode/%-color-theme.json repo mak
 	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
-.PHONY: all check palette install clean screenshots
+.PHONY: all check palette swatches install clean screenshots
 
 # Name, hex value and the minimum contrast ratio against the background.
 # 4.5 is WCAG AA and 7 is WCAG AAA. A dash means the colour isn't used for
 # text, so there's nothing to check. The first few rows aren't colours:
 # they're the theme's file name, display name and dark or light, for the
-# templates to use. The last few rows are roles that name another colour,
-# so each theme can choose what its functions and warnings look like.
+# templates to use.
+#
+# Every colour comes in eight steps, and each step does the same job in
+# both themes even though the hex values differ:
+#
+#   100  10:1    the strongest text
+#   200  7:1     bright variants
+#   300  4.5:1   normal variants
+#   400  3:1     muted text and borders
+#   500  tint    word highlights in diffs, search matches
+#   600  tint    medium backgrounds
+#   700  tint    diff lines and other backgrounds behind text
+#   800  tint    the faintest backgrounds
+#
+# Gray is all text, stepping from 14:1 down to 1.4:1. Surface is the
+# background scale: 200 is the background itself, 100 sits just behind it,
+# and 300 to 800 rise through cursor lines, selections and borders. The
+# text steps were found in OKLCH, keeping each hue and pushing its chroma
+# as far as possible at the contrast target.
+#
+# The last rows are roles that name a step, so templates can ask for
+# bright_red or cursorline and each theme decides what that means.
 define darkstar_palette
 name                  darkstar  -
 title                 Darkstar  -
-appearance            dark      -
-background            #05181d  -
-foreground            #eee8d5  7
-black                 #6c838b  4.5
-red                   #e9403a  4.5
-green                 #859900  4.5
-yellow                #b58900  4.5
-blue                  #268bd2  4.5
-magenta               #de428c  4.5
-cyan                  #2aa198  4.5
-white                 #eee8d5  7
-orange                #db5231  4.5
-bright_black          #8ea6ac  7
-bright_red            #ff796e  7
-bright_green          #83c746  7
-bright_yellow         #efc541  7
-bright_blue           #5da4ff  7
-bright_magenta        #ff81ca  7
-bright_cyan           #56d8c9  7
-bright_white          #fbf0cc  7
-bright_orange         #ed8649  7
+appearance            dark  -
+gray100               #d4e5ea  14
+gray200               #a9babf  9
+gray300               #87979c  6
+gray400               #728186  4.5
+gray500               #607075  3.5
+gray600               #4d5c60  2.6
+gray700               #39484c  1.9
+gray800               #263438  1.4
+red100                #ffaba0  10
+red200                #ff776b  7
+red300                #f1302f  4.5
+red400                #c80013  3
+red500                #641617  -
+red600                #521313  -
+red700                #441211  -
+red800                #381311  -
+orange100             #feac97  10
+orange200             #fe7958  7
+orange300             #e24922  4.5
+orange400             #ba2e01  3
+orange500             #5f2a1d  -
+orange600             #4a2219  -
+orange700             #3b1b13  -
+orange800             #2e1711  -
+yellow100             #ecb93b  10
+yellow200             #ca9a01  7
+yellow300             #9f7903  4.5
+yellow400             #7d5e02  3
+yellow500             #4a3911  -
+yellow600             #3a2d11  -
+yellow700             #2e240c  -
+yellow800             #241d0d  -
+green100              #b3cc3b  10
+green200              #95ab07  7
+green300              #758705  4.5
+green400              #5b6902  3
+green500              #064310  -
+green600              #07370e  -
+green700              #092e0d  -
+green800              #0d270f  -
+cyan100               #55d4c9  10
+cyan200               #2ab3a8  7
+cyan300               #088e85  4.5
+cyan400               #036f68  3
+cyan500               #1b4440  -
+cyan600               #183532  -
+cyan700               #122a28  -
+cyan800               #112220  -
+blue100               #83c7ff  10
+blue200               #39a8f8  7
+blue300               #0484ce  4.5
+blue400               #0367a2  3
+blue500               #1c3f5b  -
+blue600               #183246  -
+blue700               #122738  -
+blue800               #11202c  -
+magenta100            #fea7c7  10
+magenta200            #ff6ead  7
+magenta300            #e5348c  4.5
+magenta400            #bf0470  3
+magenta500            #5f243e  -
+magenta600            #4a1e31  -
+magenta700            #3b1726  -
+magenta800            #2e151f  -
+surface100            #001117  -
+surface200            #05181d  -
+surface300            #002029  -
+surface400            #002b36  -
+surface500            #093540  -
+surface600            #163f4b  -
+surface700            #204a56  -
+surface800            #475b62  -
+background            surface200  -
+foreground            gray100  -
+black                 gray400  -
+red                   red300  -
+green                 green300  -
+yellow                yellow300  -
+blue                  blue300  -
+magenta               magenta300  -
+cyan                  cyan300  -
+white                 gray200  -
+orange                orange300  -
+bright_black          gray300  -
+bright_red            red200  -
+bright_green          green200  -
+bright_yellow         yellow200  -
+bright_blue           blue200  -
+bright_magenta        magenta200  -
+bright_cyan           cyan200  -
+bright_white          gray100  -
+bright_orange         orange200  -
 emphasis              bright_yellow  -
 caution               bright_yellow  -
-caution_dim           yellow   -
-cursor_color          #839496  -
-cursor_text           #002b36  -
-selection_background  #002b36  -
-selection_foreground  #eee8d5  -
-cursorline            #002b36  -
-very_dark             #204a56  -
-selection_primary     #234a56  -
-background_two        #0b1f23  -
-linenr                #475b62  -
-surface               #163a44  -
-surface_low           #08191e  -
-raised                background_two  -
-raised_high           surface  -
-raised_max            selection_primary  -
-extreme               #ffffff  -
+caution_dim           yellow  -
+caution100            yellow100  -
+caution200            yellow200  -
+caution300            yellow300  -
+caution400            yellow400  -
+caution500            yellow500  -
+caution600            yellow600  -
+caution700            yellow700  -
+caution800            yellow800  -
+cursor_color          gray300  -
+cursor_text           surface400  -
+selection_background  surface400  -
+selection_foreground  foreground  -
+cursorline            surface400  -
+surface_low           surface100  -
+background_two        surface300  -
+raised                surface300  -
+surface               surface500  -
+raised_high           surface500  -
+selection_primary     surface600  -
+raised_max            surface600  -
+very_dark             surface700  -
+linenr                surface800  -
 endef
 
 # Lightstar is Darkstar for light backgrounds.
 #
-# The background is a white with the faintest cool tint, and the foreground
-# has the same contrast against it as Darkstar's foreground. The UI greys
-# share the background's tint.
+# The background is an off-white halfway between Solarized's cream and the
+# teal of the surfaces, so the cream doesn't clash with the teal cursor line
+# and selection above it. The surface scale drifts from that tint towards
+# teal as it gets deeper.
 #
-# Each accent is as saturated as its hue allows while reaching exactly
-# 4.5 (AA), or 7 (AAA) for the bright variants. Mirroring Darkstar's
-# higher ratios made them too dark: on a light background, high contrast
-# only leaves room for colours close to black. That's also why bright
-# colours are darker here rather than lighter.
+# Each accent is as saturated as its hue allows at each contrast target.
+# Bright variants are darker here rather than lighter, because on a light
+# background more contrast means closer to black.
 #
-# Most accents keep their Solarized hue, but two are shifted. At Solarized's
-# hues, blue turns a dull navy and green turns olive when darkened, so blue
-# moves towards true blue and green towards true green.
+# Green is shifted halfway from Solarized's olive towards true green, which
+# keeps it recognisably green once it's dark enough to read.
 #
 # Readable yellow text can only be brown on a light background, so Lightstar
 # avoids yellow text altogether. Its emphasis role, used for functions and
 # the like, is cyan, and its caution roles are orange. Yellow itself is only
 # for programs that print terminal colour 3.
-#
-# The raised rows are chosen by eye. The same contrast step looks bigger
-# on a light background than on a dark one, so they sit much closer to the
-# background than Darkstar's do.
 define lightstar_palette
 name                  lightstar  -
 title                 Lightstar  -
-appearance            light      -
-background            #fcfcff  -
-foreground            #262626  7
-black                 #617880  4.5
-red                   #ea031a  4.5
-green                 #058824  4.5
-yellow                #996d04  4.5
-blue                  #006bff  4.5
-magenta               #e10584  4.5
-cyan                  #00837b  4.5
-white                 #262626  7
-orange                #da3701  4.5
-bright_black          #445a62  7
-bright_red            #b30111  7
-bright_green          #006618  7
-bright_yellow         #745104  7
-bright_blue           #0150c2  7
-bright_magenta        #ab0263  7
-bright_cyan           #09625c  7
-bright_white          #000000  7
-bright_orange         #a62801  7
-emphasis              cyan           -
+appearance            light  -
+gray100               #1b282d  14
+gray200               #38474b  9
+gray300               #526165  6
+gray400               #65747a  4.5
+gray500               #77868c  3.5
+gray600               #8d9da3  2.6
+gray700               #a8b8be  1.9
+gray800               #c5d5db  1.4
+red100                #820009  10
+red200                #ad000f  7
+red300                #e40018  4.5
+red400                #ff5048  3
+red500                #febcb6  -
+red600                #ffcdc7  -
+red700                #fed8d4  -
+red800                #ffe1de  -
+orange100             #781a01  10
+orange200             #a12500  7
+orange300             #d53501  4.5
+orange400             #fe5429  3
+orange500             #ffb8a6  -
+orange600             #ffcbbe  -
+orange700             #ffdbd2  -
+orange800             #ffe6e0  -
+yellow100             #4f3a01  10
+yellow200             #6c5000  7
+yellow300             #906c04  4.5
+yellow400             #b48808  3
+yellow500             #e6c887  -
+yellow600             #eed6a4  -
+yellow700             #f6e2b7  -
+yellow800             #faebcc  -
+green100              #2b4500  10
+green200              #3c5d03  7
+green300              #517e03  4.5
+green400              #689e06  3
+green500              #b5df8a  -
+green600              #c4e9a1  -
+green700              #d0efb4  -
+green800              #dbf3c5  -
+cyan100               #004641  10
+cyan200               #025f5a  7
+cyan300               #0a7f78  4.5
+cyan400               #08a097  3
+cyan500               #82dfd6  -
+cyan600               #a3e8e1  -
+cyan700               #b7f2eb  -
+cyan800               #ccf7f2  -
+blue100               #014069  10
+blue200               #00588d  7
+blue300               #0676ba  4.5
+blue400               #0595ea  3
+blue500               #9fd2fe  -
+blue600               #b9deff  -
+blue700               #cfe8fe  -
+blue800               #deefff  -
+magenta100            #7c0246  10
+magenta200            #a60060  7
+magenta300            #db0381  4.5
+magenta400            #fe439e  3
+magenta500            #fcb4ce  -
+magenta600            #ffc7da  -
+magenta700            #ffd8e5  -
+magenta800            #fee5ed  -
+surface100            #fafcf9  -
+surface200            #f4f8f1  -
+surface300            #e9f3f0  -
+surface400            #deedee  -
+surface500            #cee2e7  -
+surface600            #bcd6df  -
+surface700            #a9c3cb  -
+surface800            #7f979f  -
+background            surface200  -
+foreground            gray100  -
+black                 gray400  -
+red                   red300  -
+green                 green300  -
+yellow                yellow300  -
+blue                  blue300  -
+magenta               magenta300  -
+cyan                  cyan300  -
+white                 gray200  -
+orange                orange300  -
+bright_black          gray300  -
+bright_red            red200  -
+bright_green          green200  -
+bright_yellow         yellow200  -
+bright_blue           blue200  -
+bright_magenta        magenta200  -
+bright_cyan           cyan200  -
+bright_white          gray100  -
+bright_orange         orange200  -
+emphasis              cyan  -
 caution               bright_orange  -
-caution_dim           orange         -
-cursor_color          #646467  -
-cursor_text           #e6e6e9  -
-selection_background  #e6e6e9  -
-selection_foreground  #262626  -
-cursorline            #ebf6f4  -
-very_dark             #bababd  -
-selection_primary     #bababc  -
-background_two        #f4f4f8  -
-linenr                #a0a0a3  -
-surface               #d1d1d4  -
-surface_low           #ffffff  -
-raised                #ffffff  -
-raised_high           cursorline  -
-raised_max            #e9e9ec  -
-extreme               #000000  -
+caution_dim           orange  -
+caution100            orange100  -
+caution200            orange200  -
+caution300            orange300  -
+caution400            orange400  -
+caution500            orange500  -
+caution600            orange600  -
+caution700            orange700  -
+caution800            orange800  -
+cursor_color          gray300  -
+cursor_text           surface400  -
+selection_background  surface400  -
+selection_foreground  foreground  -
+cursorline            surface400  -
+surface_low           surface100  -
+background_two        surface300  -
+raised                surface300  -
+surface               surface500  -
+raised_high           surface500  -
+selection_primary     surface600  -
+raised_max            surface600  -
+very_dark             surface700  -
+linenr                surface800  -
 endef
 
 define common_awk
 function hexdigit(d) { return index("0123456789abcdef", tolower(d)) - 1 }
 function channel(c, i) { return hexdigit(substr(c, i, 1)) * 16 + hexdigit(substr(c, i + 1, 1)) }
 
-BEGIN {
-  lines = split(ENVIRON["PALETTE"], rows, "\n")
-  for (i = 1; i <= lines; i++) {
-    if (split(rows[i], f, " ") < 3) continue
-    hexes[f[1]] = f[2]
-    minimum[f[1]] = f[3]
-    order[++count] = f[1]
-  }
-}
-endef
-
-define render_awk
 function colour(name) {
   if (name ~ /^#/) return name
   if (hexes[name] in hexes) return colour(hexes[name])
@@ -354,38 +522,6 @@ function colour(name) {
   return hexes[name]
 }
 
-function mix(a, b, t,   i, x, y, out) {
-  a = colour(a)
-  b = colour(b)
-  out = "#"
-  for (i = 2; i <= 6; i += 2) {
-    x = channel(a, i)
-    y = channel(b, i)
-    out = out sprintf("%02x", int(x + (y - x) * t + 0.5))
-  }
-  return out
-}
-
-{
-  line = $0
-  while (match(line, /\{\{[^}]*\}\}/)) {
-    n = split(substr(line, RSTART + 2, RLENGTH - 4), w, " ")
-    if (n == 1) value = colour(w[1])
-    else if (n == 4 && w[1] == "mix") value = mix(w[2], w[3], w[4])
-    else {
-      printf "line %d: can't render '%s'\n", NR, substr(line, RSTART, RLENGTH) > "/dev/stderr"
-      failed = 1
-      exit 1
-    }
-    line = substr(line, 1, RSTART - 1) value substr(line, RSTART + RLENGTH)
-  }
-  print line
-}
-
-END { if (failed) exit 1 }
-endef
-
-define check_awk
 function linear(v) {
   v /= 255
   return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ^ 2.4
@@ -401,6 +537,37 @@ function contrast(a, b,   x, y) {
   return x > y ? x / y : y / x
 }
 
+BEGIN {
+  lines = split(ENVIRON["PALETTE"], rows, "\n")
+  for (i = 1; i <= lines; i++) {
+    if (split(rows[i], f, " ") < 3) continue
+    hexes[f[1]] = f[2]
+    minimum[f[1]] = f[3]
+    order[++count] = f[1]
+  }
+}
+endef
+
+define render_awk
+{
+  line = $0
+  while (match(line, /\{\{[^}]*\}\}/)) {
+    n = split(substr(line, RSTART + 2, RLENGTH - 4), w, " ")
+    if (n == 1) value = colour(w[1])
+    else {
+      printf "line %d: can't render '%s'\n", NR, substr(line, RSTART, RLENGTH) > "/dev/stderr"
+      failed = 1
+      exit 1
+    }
+    line = substr(line, 1, RSTART - 1) value substr(line, RSTART + RLENGTH)
+  }
+  print line
+}
+
+END { if (failed) exit 1 }
+endef
+
+define check_awk
 function rating(r) {
   if (r >= 7) return "AAA"
   if (r >= 4.5) return "AA"
@@ -412,7 +579,7 @@ BEGIN {
   for (i = 1; i <= count; i++) {
     name = order[i]
     if (minimum[name] == "-") continue
-    r = contrast(hexes[name], hexes["background"])
+    r = contrast(hexes[name], colour("background"))
     status = ""
     if (r < minimum[name]) {
       status = "  below " minimum[name]
@@ -421,6 +588,63 @@ BEGIN {
     printf "%-16s %s  %5.2f  %s%s\n", name, hexes[name], r, rating(r), status
   }
   if (strict && failed) exit 1
+}
+endef
+
+# Draws every step of every colour as an SVG grid. Text steps are drawn as
+# text in their own colour and tints and surfaces as filled cells, with the
+# hex value, contrast against the background and OKLCH value in each.
+define swatch_awk
+function oklch(c,   r, g, b, l, m, s, L, A, B, h) {
+  r = linear(channel(c, 2)); g = linear(channel(c, 4)); b = linear(channel(c, 6))
+  l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ^ (1 / 3)
+  m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ^ (1 / 3)
+  s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ^ (1 / 3)
+  L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+  A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+  B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+  h = atan2(B, A) * 180 / 3.14159265358979
+  if (h < 0) h += 360
+  return sprintf("oklch(%.3f %.3f %.0f)", L, sqrt(A * A + B * B), h)
+}
+
+function label(x, y, text, fill) {
+  printf "<text x=\"%d\" y=\"%d\" fill=\"%s\">%s</text>\n", x, y, fill, text
+}
+
+BEGIN {
+  n = split("gray red orange yellow green cyan blue magenta surface", families, " ")
+  bg = colour("background")
+  fg = colour("foreground")
+  left = 24; top = 24; head = 100; cw = 200; ch = 72
+  width = left * 2 + head + cw * 8
+  height = top * 2 + 50 + 30 + ch * n
+  printf "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" font-family=\"Lilex, monospace\" font-size=\"13\">\n", width, height
+  printf "<rect width=\"100%%\" height=\"100%%\" fill=\"%s\"/>\n", bg
+  printf "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-size=\"24\" font-weight=\"bold\">%s</text>\n", left, top + 26, fg, colour("title")
+  y = top + 50 + 20
+  for (s = 1; s <= 8; s++) label(left + head + (s - 1) * cw + 8, y, s "00", fg)
+  for (row = 1; row <= n; row++) {
+    fam = families[row]
+    y = top + 50 + 30 + (row - 1) * ch
+    label(left, y + 40, fam, fg)
+    for (s = 1; s <= 8; s++) {
+      c = colour(fam s "00")
+      x = left + head + (s - 1) * cw
+      text = c
+      if (fam == "surface") text = fg
+      else if (fam != "gray" && s > 4) text = colour(fam "200")
+      if (text == c) {
+        printf "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"8\" fill=\"%s\"/>\n", x + 4, y + 4, cw - 8, c
+      } else {
+        printf "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>\n", x + 4, y + 4, cw - 8, ch - 8, c
+      }
+      label(x + 10, y + 28, c, text)
+      label(x + 10, y + 44, sprintf("%.2f:1", contrast(c, bg)), text)
+      label(x + 10, y + 60, oklch(c), text)
+    }
+  }
+  print "</svg>"
 }
 endef
 
@@ -546,8 +770,8 @@ define helix
 "ui.popup.info" = {fg = "white", bg = "background", modifiers = ["bold"]}
 "ui.selection" = { bg = "selection_primary" }
 "ui.selection.primary" = { bg = "selection_primary", modifiers=["bold"] }
-"ui.statusline" = { fg = "very_dark", bg = "background" }
-"ui.statusline.inactive" = { fg = "very_dark", bg = "background" }
+"ui.statusline" = { fg = "black", bg = "background" }
+"ui.statusline.inactive" = { fg = "linenr", bg = "background" }
 "ui.text" = { fg = "white" }
 "ui.text.focus" = { fg = "blue", bg="cursorline", modifiers = ["bold"]}
 "ui.text.info" = {fg = "white", modifiers = ["bold"]}
@@ -819,7 +1043,7 @@ endef
 define helix_scene
 mkdir -p "$SCENE_DIR/xdg/helix/themes"
 cp "$DARKSTAR/helix/$THEME.toml" "$SCENE_DIR/xdg/helix/themes/"
-printf 'theme = "%s"\n' "$THEME" > "$SCENE_DIR/xdg/helix/config.toml"
+printf 'theme = "%s"\n\n[editor]\ncursorline = true\n' "$THEME" > "$SCENE_DIR/xdg/helix/config.toml"
 export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_CACHE_HOME="$SCENE_DIR/cache"
 cd "$DARKSTAR/repo"
 exec hx src/cart.ts:24
@@ -1020,81 +1244,81 @@ define opencode_mode
   "{{appearance}}": {
     "hue": {
       "red": {
-        "100": "{{mix bright_red extreme 0.6}}",
-        "200": "{{mix bright_red extreme 0.3}}",
-        "300": "{{mix bright_red extreme 0.12}}",
+        "100": "{{red100}}",
+        "200": "{{red100}}",
+        "300": "{{red200}}",
         "400": "{{bright_red}}",
         "500": "{{red}}",
-        "600": "{{mix red background 0.6}}",
-        "700": "{{mix red background 0.78}}",
-        "800": "{{mix red background 0.88}}",
-        "900": "{{mix red background 0.95}}"
+        "600": "{{red500}}",
+        "700": "{{red600}}",
+        "800": "{{red800}}",
+        "900": "{{red800}}"
       },
       "orange": {
-        "100": "{{mix bright_orange extreme 0.6}}",
-        "200": "{{mix bright_orange extreme 0.3}}",
-        "300": "{{mix bright_orange extreme 0.12}}",
+        "100": "{{orange100}}",
+        "200": "{{orange100}}",
+        "300": "{{orange200}}",
         "400": "{{bright_orange}}",
         "500": "{{orange}}",
-        "600": "{{mix orange background 0.6}}",
-        "700": "{{mix orange background 0.78}}",
-        "800": "{{mix orange background 0.88}}",
-        "900": "{{mix orange background 0.95}}"
+        "600": "{{orange500}}",
+        "700": "{{orange600}}",
+        "800": "{{orange800}}",
+        "900": "{{orange800}}"
       },
       "yellow": {
-        "100": "{{mix caution extreme 0.6}}",
-        "200": "{{mix caution extreme 0.3}}",
-        "300": "{{mix caution extreme 0.12}}",
+        "100": "{{caution100}}",
+        "200": "{{caution100}}",
+        "300": "{{caution200}}",
         "400": "{{caution}}",
         "500": "{{caution_dim}}",
-        "600": "{{mix caution_dim background 0.6}}",
-        "700": "{{mix caution_dim background 0.78}}",
-        "800": "{{mix caution_dim background 0.88}}",
-        "900": "{{mix caution_dim background 0.95}}"
+        "600": "{{caution500}}",
+        "700": "{{caution600}}",
+        "800": "{{caution800}}",
+        "900": "{{caution800}}"
       },
       "green": {
-        "100": "{{mix bright_green extreme 0.6}}",
-        "200": "{{mix bright_green extreme 0.3}}",
-        "300": "{{mix bright_green extreme 0.12}}",
+        "100": "{{green100}}",
+        "200": "{{green100}}",
+        "300": "{{green200}}",
         "400": "{{bright_green}}",
         "500": "{{green}}",
-        "600": "{{mix green background 0.6}}",
-        "700": "{{mix green background 0.78}}",
-        "800": "{{mix green background 0.88}}",
-        "900": "{{mix green background 0.95}}"
+        "600": "{{green500}}",
+        "700": "{{green600}}",
+        "800": "{{green800}}",
+        "900": "{{green800}}"
       },
       "cyan": {
-        "100": "{{mix bright_cyan extreme 0.6}}",
-        "200": "{{mix bright_cyan extreme 0.3}}",
-        "300": "{{mix bright_cyan extreme 0.12}}",
+        "100": "{{cyan100}}",
+        "200": "{{cyan100}}",
+        "300": "{{cyan200}}",
         "400": "{{bright_cyan}}",
         "500": "{{cyan}}",
-        "600": "{{mix cyan background 0.6}}",
-        "700": "{{mix cyan background 0.78}}",
-        "800": "{{mix cyan background 0.88}}",
-        "900": "{{mix cyan background 0.95}}"
+        "600": "{{cyan500}}",
+        "700": "{{cyan600}}",
+        "800": "{{cyan800}}",
+        "900": "{{cyan800}}"
       },
       "blue": {
-        "100": "{{mix bright_blue extreme 0.6}}",
-        "200": "{{mix bright_blue extreme 0.3}}",
-        "300": "{{mix bright_blue extreme 0.12}}",
+        "100": "{{blue100}}",
+        "200": "{{blue100}}",
+        "300": "{{blue200}}",
         "400": "{{bright_blue}}",
         "500": "{{blue}}",
-        "600": "{{mix blue background 0.6}}",
-        "700": "{{mix blue background 0.78}}",
-        "800": "{{mix blue background 0.88}}",
-        "900": "{{mix blue background 0.95}}"
+        "600": "{{blue500}}",
+        "700": "{{blue600}}",
+        "800": "{{blue800}}",
+        "900": "{{blue800}}"
       },
       "purple": {
-        "100": "{{mix bright_magenta extreme 0.6}}",
-        "200": "{{mix bright_magenta extreme 0.3}}",
-        "300": "{{mix bright_magenta extreme 0.12}}",
+        "100": "{{magenta100}}",
+        "200": "{{magenta100}}",
+        "300": "{{magenta200}}",
         "400": "{{bright_magenta}}",
         "500": "{{magenta}}",
-        "600": "{{mix magenta background 0.6}}",
-        "700": "{{mix magenta background 0.78}}",
-        "800": "{{mix magenta background 0.88}}",
-        "900": "{{mix magenta background 0.95}}"
+        "600": "{{magenta500}}",
+        "700": "{{magenta600}}",
+        "800": "{{magenta800}}",
+        "900": "{{magenta800}}"
       },
       "gray": {
         "100": "{{bright_white}}",
@@ -1125,8 +1349,8 @@ define opencode_mode
         "hunkHeader": "{{bright_black}}"
       },
       "background": {
-        "added": "{{mix green background 0.82}}",
-        "removed": "{{mix red background 0.82}}",
+        "added": "{{green700}}",
+        "removed": "{{red700}}",
         "context": "$hue.neutral.700"
       },
       "highlight": {
@@ -1136,8 +1360,8 @@ define opencode_mode
       "lineNumber": {
         "text": "{{linenr}}",
         "background": {
-          "added": "{{mix green background 0.88}}",
-          "removed": "{{mix red background 0.88}}"
+          "added": "{{green800}}",
+          "removed": "{{red800}}"
         }
       }
     },
@@ -1232,10 +1456,10 @@ local c = {
   background_two = "{{background_two}}",
   linenr = "{{linenr}}",
   surface = "{{surface}}",
-  diff_add = "{{mix green background 0.82}}",
-  diff_delete = "{{mix red background 0.82}}",
-  diff_change = "{{mix caution_dim background 0.88}}",
-  diff_text = "{{mix caution_dim background 0.7}}",
+  diff_add = "{{green700}}",
+  diff_delete = "{{red700}}",
+  diff_change = "{{caution800}}",
+  diff_text = "{{caution500}}",
 }
 
 local groups = {
@@ -1750,16 +1974,16 @@ define zed
         "terminal.ansi.bright_white": "{{bright_white}}",
         "link_text.hover": "{{bright_blue}}",
         "conflict": "{{bright_orange}}",
-        "conflict.background": "{{mix orange background 0.82}}",
+        "conflict.background": "{{orange700}}",
         "conflict.border": "{{orange}}",
         "created": "{{bright_green}}",
-        "created.background": "{{mix green background 0.82}}",
+        "created.background": "{{green700}}",
         "created.border": "{{green}}",
         "deleted": "{{bright_red}}",
-        "deleted.background": "{{mix red background 0.82}}",
+        "deleted.background": "{{red700}}",
         "deleted.border": "{{red}}",
         "error": "{{bright_red}}",
-        "error.background": "{{mix red background 0.82}}",
+        "error.background": "{{red700}}",
         "error.border": "{{red}}",
         "hidden": "{{linenr}}",
         "hint": "{{bright_black}}",
@@ -1767,19 +1991,19 @@ define zed
         "hint.border": "{{very_dark}}",
         "ignored": "{{linenr}}",
         "info": "{{bright_blue}}",
-        "info.background": "{{mix blue background 0.82}}",
+        "info.background": "{{blue700}}",
         "info.border": "{{blue}}",
         "modified": "{{caution}}",
-        "modified.background": "{{mix caution_dim background 0.82}}",
+        "modified.background": "{{caution700}}",
         "modified.border": "{{caution_dim}}",
         "predictive": "{{bright_black}}",
         "renamed": "{{bright_blue}}",
         "success": "{{bright_green}}",
-        "success.background": "{{mix green background 0.82}}",
+        "success.background": "{{green700}}",
         "success.border": "{{green}}",
         "unreachable": "{{bright_black}}",
         "warning": "{{caution}}",
-        "warning.background": "{{mix caution_dim background 0.82}}",
+        "warning.background": "{{caution700}}",
         "warning.border": "{{caution_dim}}",
         "players": [
           { "cursor": "{{foreground}}", "background": "{{foreground}}", "selection": "{{selection_primary}}" },
@@ -1978,11 +2202,11 @@ define vscode_theme
     "input.placeholderForeground": "{{black}}",
     "inputOption.activeBorder": "{{blue}}",
     "inputOption.activeBackground": "{{selection_primary}}",
-    "inputValidation.errorBackground": "{{mix red background 0.82}}",
+    "inputValidation.errorBackground": "{{red700}}",
     "inputValidation.errorBorder": "{{red}}",
-    "inputValidation.warningBackground": "{{mix caution_dim background 0.82}}",
+    "inputValidation.warningBackground": "{{caution700}}",
     "inputValidation.warningBorder": "{{caution_dim}}",
-    "inputValidation.infoBackground": "{{mix blue background 0.82}}",
+    "inputValidation.infoBackground": "{{blue700}}",
     "inputValidation.infoBorder": "{{blue}}",
     "badge.background": "{{blue}}",
     "badge.foreground": "{{background}}",
@@ -2099,14 +2323,14 @@ define vscode_theme
     "peekViewTitle.background": "{{background_two}}",
     "minimap.background": "{{background}}",
 
-    "diffEditor.insertedTextBackground": "{{mix green background 0.7}}",
-    "diffEditor.removedTextBackground": "{{mix red background 0.7}}",
-    "diffEditor.insertedLineBackground": "{{mix green background 0.82}}",
-    "diffEditor.removedLineBackground": "{{mix red background 0.82}}",
-    "merge.currentHeaderBackground": "{{mix green background 0.7}}",
-    "merge.currentContentBackground": "{{mix green background 0.82}}",
-    "merge.incomingHeaderBackground": "{{mix blue background 0.7}}",
-    "merge.incomingContentBackground": "{{mix blue background 0.82}}",
+    "diffEditor.insertedTextBackground": "{{green500}}",
+    "diffEditor.removedTextBackground": "{{red500}}",
+    "diffEditor.insertedLineBackground": "{{green700}}",
+    "diffEditor.removedLineBackground": "{{red700}}",
+    "merge.currentHeaderBackground": "{{green500}}",
+    "merge.currentContentBackground": "{{green700}}",
+    "merge.incomingHeaderBackground": "{{blue500}}",
+    "merge.incomingContentBackground": "{{blue700}}",
 
     "gitDecoration.addedResourceForeground": "{{bright_green}}",
     "gitDecoration.modifiedResourceForeground": "{{caution}}",
@@ -2293,6 +2517,7 @@ export PALETTE_darkstar := $(value darkstar_palette)
 export PALETTE_lightstar := $(value lightstar_palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
+export SWATCH_AWK := $(value common_awk)$(newline)$(value swatch_awk)
 export GHOSTTY := $(value ghostty)
 export HELIX := $(value helix)
 export LAZYGIT := $(value lazygit)

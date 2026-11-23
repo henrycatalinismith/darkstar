@@ -1,7 +1,7 @@
 gui:
   theme:
     activeBorderColor:
-      - "#eee8d5"
+      - "#d4e5ea"
       - bold
     inactiveBorderColor:
       - "#475b62"
@@ -10,4 +10,4 @@ gui:
     selectedLineBgColor:
       - "#002b36"
     inactiveViewSelectedLineBgColor:
-      - "#0b1f23"
+      - "#002029"

@@ -1,13 +1,13 @@
 gui:
   theme:
     activeBorderColor:
-      - "#262626"
+      - "#1b282d"
       - bold
     inactiveBorderColor:
-      - "#a0a0a3"
+      - "#7f979f"
     selectedLineFgColor:
       - default
     selectedLineBgColor:
-      - "#ebf6f4"
+      - "#deedee"
     inactiveViewSelectedLineBgColor:
-      - "#f4f4f8"
+      - "#e9f3f0"
