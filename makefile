@@ -201,7 +201,26 @@ chrome/%/icon.png: makefile
 # make chrome-store builds what the Chrome Web Store asks for: a zip of the
 # theme and a 1280×800 screenshot with square corners. Only Darkstar is
 # published there. Lightstar stays as a folder to load unpacked.
-chrome-store: chrome/darkstar.zip screenshots/chrome-store/darkstar.png
+chrome-store: chrome/darkstar.zip screenshots/chrome-store/darkstar.png screenshots/chrome-store/darkstar-tile.png
+
+# The store's 440×280 small promo tile: the icon's crescent moon, scaled up,
+# in a sky of the palette's bright colours. No text, as the store advises.
+screenshots/chrome-store/%-tile.png: makefile
+	@mkdir -p $(@D)
+	@set -- $$(printf '{{background}} {{emphasis}} {{very_dark}} {{bright_blue}} {{bright_magenta}} {{bright_cyan}} {{foreground}} {{bright_green}}\n' | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK") && \
+		magick -size 440x280 xc:"$$1" \
+			-fill "$$7" -draw 'circle 48,52 50,52' -draw 'circle 392,236 394,236' -draw 'circle 120,214 121,214' -draw 'circle 410,40 411,40' \
+			-fill "$$4" -draw 'circle 92,128 95,128' -draw 'circle 372,92 374,92' \
+			-fill "$$5" -draw 'circle 152,58 154,58' -draw 'circle 342,210 345,210' \
+			-fill "$$6" -draw 'circle 60,240 62,240' -draw 'circle 402,150 404,150' \
+			-fill "$$8" -draw 'circle 180,250 182,250' \
+			-fill "$$3" -draw 'circle 256,140 346,140' \
+			\( -size 440x280 xc:none -fill "$$2" -draw 'circle 256,140 346,140' \
+				\( -size 440x280 xc:none -fill black -draw 'circle 223,140 313,140' \) \
+				-compose DstOut -composite \) \
+			-compose Over -composite \
+			$@
+	@echo "  $@"
 
 chrome/%.zip: chrome/%/manifest.json chrome/%/icon.png
 	@rm -f $@
