@@ -211,7 +211,7 @@ repo: makefile
 	@echo "  $@"
 
 # Screenshots go in screenshots/<app>/<theme>.webp.
-SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,hero ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).webp))
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,readme ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).webp))
 
 screenshots: $(SCREENSHOTS)
 
@@ -260,14 +260,14 @@ screenshots/zellij/%.webp: WAIT = 3
 screenshots/zellij/%.webp: ghostty/%.toml zellij/%.kdl repo makefile
 	$(terminal_screenshot)
 
-# The hero shot is Zellij running Helix, Lazygit and zsh side by side in a
-# bigger window with no title bar.
-screenshots/hero/%.webp: SCENE = HERO_SCENE
-screenshots/hero/%.webp: TITLE = Darkstar
-screenshots/hero/%.webp: WAIT = 5
-screenshots/hero/%.webp: SIZE = 160 46
-screenshots/hero/%.webp: DECORATION = none
-screenshots/hero/%.webp: ghostty/%.toml helix/%.toml lazygit/darkstar.yml zellij/%.kdl repo makefile
+# The readme shot is Zellij running Helix, OpenCode, Lazygit and zsh in a
+# bigger window with no title bar, with OpenCode under Helix.
+screenshots/readme/%.webp: SCENE = README_SCENE
+screenshots/readme/%.webp: TITLE = Darkstar
+screenshots/readme/%.webp: WAIT = 8
+screenshots/readme/%.webp: SIZE = 160 46
+screenshots/readme/%.webp: DECORATION = none
+screenshots/readme/%.webp: ghostty/%.toml helix/%.toml lazygit/darkstar.yml opencode/darkstar.json zellij/%.kdl repo makefile
 	$(terminal_screenshot)
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
@@ -1993,11 +1993,21 @@ export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
 exec zellij --config-dir "$SCENE_DIR/zellij" --new-session-with-layout "$SCENE_DIR/zellij/layout.kdl" --session darkstar-screenshot
 endef
 
-define hero_scene
+define readme_scene
 mkdir -p "$SCENE_DIR/xdg/helix/themes" "$SCENE_DIR/zellij/themes" "$SCENE_DIR/lazygit" "$SCENE_DIR/zsh"
 cp "$DARKSTAR/helix/$THEME.toml" "$SCENE_DIR/xdg/helix/themes/"
 printf 'theme = "%s"\n\n[editor]\ncursorline = true\n' "$THEME" > "$SCENE_DIR/xdg/helix/config.toml"
 cp "$DARKSTAR/zellij/$THEME.kdl" "$SCENE_DIR/zellij/themes/"
+mkdir -p "$SCENE_DIR/xdg/opencode/themes"
+cp "$DARKSTAR/opencode/darkstar.json" "$SCENE_DIR/xdg/opencode/themes/"
+mode=dark
+[ "$THEME" = lightstar ] && mode=light
+cat > "$SCENE_DIR/xdg/opencode/cli.json" <<JSON
+{
+  "theme": { "name": "darkstar", "mode": "$mode" },
+  "animations": false
+}
+JSON
 cat > "$SCENE_DIR/lazygit/config.yml" <<'EOF'
 gui:
   nerdFontsVersion: "3"
@@ -2038,9 +2048,15 @@ layout {
     }
     tab name="basket" focus=true {
         pane split_direction="vertical" {
-            pane name="helix" size="55%" focus=true command="hx" {
-                args "src/cart.ts:24"
-                cwd "$DARKSTAR/repo"
+            pane split_direction="horizontal" size="55%" {
+                pane name="helix" size="60%" focus=true command="hx" {
+                    args "src/cart.ts:24"
+                    cwd "$DARKSTAR/repo"
+                }
+                pane name="opencode" command="opencode" {
+                    args "--standalone"
+                    cwd "$DARKSTAR/repo"
+                }
             }
             pane split_direction="horizontal" {
                 pane name="lazygit" size="60%" command="lazygit" {
@@ -2060,6 +2076,8 @@ layout {
 }
 KDL
 export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_CACHE_HOME="$SCENE_DIR/cache"
+export XDG_DATA_HOME="$SCENE_DIR/data" XDG_STATE_HOME="$SCENE_DIR/state"
+export OPENCODE_DISABLE_AUTOUPDATE=1
 export ZDOTDIR="$SCENE_DIR/zsh"
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
@@ -2934,7 +2952,7 @@ export NVIM_GROUPS := $(value nvim_groups)
 export NVIM_SCENE := $(value nvim_scene)
 export ZELLIJ := $(value zellij)
 export ZELLIJ_SCENE := $(value zellij_scene)
-export HERO_SCENE := $(value hero_scene)
+export README_SCENE := $(value readme_scene)
 export ZED := $(value zed)
 export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
 export VSCODE_PACKAGE := $(value vscode_package)
