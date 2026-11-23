@@ -195,7 +195,7 @@ repo: makefile
 	@echo "  $@"
 
 # Screenshots go in screenshots/<theme>/<app>.png.
-SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode,screenshots/$(t)/$(a).png))
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(t)/$(a).png))
 
 screenshots: $(SCREENSHOTS)
 
@@ -254,6 +254,16 @@ screenshots/%/zed.png: zed/%.json repo makefile
 screenshots/%/vscode.png: vscode/package.json vscode/%-color-theme.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
+	@echo "  $@"
+
+screenshots/%/chrome.png: chrome/%/manifest.json makefile
+	@mkdir -p $(@D)
+	@THEME=$* sh -c "$$CHROME_SCREENSHOT_SH" chrome-screenshot $@ 983 664
+	@echo "  $@"
+
+screenshots/%/firefox.png: firefox/manifest.json makefile
+	@mkdir -p $(@D)
+	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
 
 .PHONY: all check palette swatches install clean screenshots
@@ -2660,6 +2670,115 @@ define chrome
 }
 endef
 
+# The browser screenshots open example.com in three tabs and select the
+# middle one, so the selected tab shows up against a tab on each side.
+#
+# Branded Chrome ignores --load-extension, so this downloads Chrome for
+# Testing into ~/.cache/darkstar the first time. Set CHROME_BIN to use
+# another Chromium instead.
+#
+# Arguments: output file, window width and height in points.
+define chrome_screenshot_sh
+set -e
+out="$PWD/$1"; width="$2"; height="$3"
+darkstar="$PWD"
+dir=$(mktemp -d /tmp/chrome.XXXX)
+trap 'rm -rf "$dir"' EXIT
+[ "$THEME" = darkstar ] && scheme=0 || scheme=1
+
+if [ -z "$CHROME_BIN" ]; then
+  CHROME_BIN=$(npx -y @puppeteer/browsers install chrome@stable --path "$HOME/.cache/darkstar" | tail -1 | sed 's/^[^ ]* //')
+fi
+
+"$CHROME_BIN" --user-data-dir="$dir" --load-extension="$darkstar/chrome/$THEME" \
+  --no-first-run --no-default-browser-check --disable-search-engine-choice-screen \
+  --hide-crash-restore-bubble --new-window --test-type --disable-infobars \
+  --blink-settings=preferredColorScheme=$scheme \
+  https://example.com https://example.com https://example.com > /dev/null 2>&1 &
+pid=$!
+endef
+
+# Release Firefox won't install an unsigned add-on, so web-ext loads it as a
+# temporary add-on instead. ui.systemUsesDarkTheme picks Darkstar or
+# Lightstar regardless of the system's own setting.
+define firefox_screenshot_sh
+set -e
+out="$PWD/$1"; width="$2"; height="$3"
+darkstar="$PWD"
+dir=$(mktemp -d /tmp/firefox.XXXX)
+trap 'rm -rf "$dir"' EXIT
+[ "$THEME" = darkstar ] && dark=1 || dark=0
+
+# web-ext drives Firefox remotely, which stripes the address bar and adds
+# a robot icon. Neither is part of the theme, so hide them.
+mkdir -p "$dir/profile/chrome"
+cat > "$dir/profile/chrome/userChrome.css" <<CSS
+#urlbar > .urlbar-background { background-image: none !important; }
+#remote-control-box { display: none !important; }
+CSS
+
+npx -y web-ext run --source-dir "$darkstar/firefox" \
+  --firefox-profile "$dir/profile" --profile-create-if-missing --keep-profile-changes \
+  --no-reload --no-input \
+  --pref ui.systemUsesDarkTheme=$dark \
+  --pref toolkit.legacyUserProfileCustomizations.stylesheets=true \
+  --pref browser.ipProtection.enabled=false \
+  --pref browser.vpn_promo.enabled=false \
+  --pref browser.aboutwelcome.enabled=false \
+  --pref browser.startup.homepage_override.mstone=ignore \
+  --pref browser.shell.checkDefaultBrowser=false \
+  --pref datareporting.policy.dataSubmissionPolicyBypassNotification=true \
+  --start-url https://example.com --start-url https://example.com --start-url https://example.com \
+  > /dev/null 2>&1 &
+webext=$!
+
+pid=
+for i in $(seq 300); do
+  pid=$(pgrep -f "MacOS/firefox.*$dir/profile" | head -1)
+  [ -n "$pid" ] && break
+  sleep 0.2
+done
+if [ -z "$pid" ]; then
+  echo "couldn't start Firefox" >&2
+  kill "$webext"
+  exit 1
+fi
+trap 'kill "$webext" 2>/dev/null; wait "$webext" 2>/dev/null || true; rm -rf "$dir"' EXIT
+endef
+
+# The rest of each browser screenshot, once $pid is the browser's process.
+define browser_capture_sh
+window=
+for i in $(seq 150); do
+  window=$(osascript -l JavaScript -e "$WINDOW_ID_JS" "$pid")
+  [ -n "$window" ] && break
+  sleep 0.2
+done
+if [ -z "$window" ]; then
+  echo "couldn't find the browser window" >&2
+  kill "$pid"
+  exit 1
+fi
+
+sleep 3
+osascript \
+  -e "tell application \"System Events\" to tell (first process whose unix id is $pid)" \
+  -e "set frontmost to true" \
+  -e "set size of window 1 to {$width, $height}" \
+  -e "keystroke \"2\" using command down" \
+  -e "end tell" > /dev/null 2>&1 ||
+  echo "couldn't drive the browser window: does this terminal have Accessibility permission?" >&2
+
+sleep 2
+screencapture -x -o -l "$window" "$out" || {
+  echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
+  kill "$pid"
+  exit 1
+}
+kill "$pid"
+wait "$pid" 2>/dev/null || true
+endef
+
 export PALETTE_darkstar := $(value darkstar_palette)
 export PALETTE_lightstar := $(value lightstar_palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
@@ -2689,3 +2808,5 @@ export VSCODE_SCREENSHOT_SH := $(value vscode_screenshot_sh)
 export FIREFOX := $(value firefox)
 export FIREFOX_COLORS := $(value firefox_colors)
 export CHROME := $(value chrome)
+export CHROME_SCREENSHOT_SH := $(value chrome_screenshot_sh)$(newline)$(value browser_capture_sh)
+export FIREFOX_SCREENSHOT_SH := $(value firefox_screenshot_sh)$(newline)$(value browser_capture_sh)
