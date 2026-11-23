@@ -189,10 +189,12 @@
 
     .repo-link {
       display: inline-flex;
+      flex-direction: column;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.5rem;
       color: var(--blue);
-      font-size: 1.25rem;
+      font-size: 0.95rem;
+      white-space: nowrap;
       text-decoration: none;
     }
 
@@ -201,8 +203,21 @@
     }
 
     .repo-link__icon {
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 2rem;
+      height: 2rem;
+    }
+
+    @media (min-width: 641px) {
+      .repo-link {
+        flex-direction: row;
+        gap: 0.6rem;
+        font-size: 1.25rem;
+      }
+
+      .repo-link__icon {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
     }
   </style>
 </head>
