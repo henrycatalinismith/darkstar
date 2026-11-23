@@ -211,7 +211,7 @@ repo: makefile
 	@echo "  $@"
 
 # Screenshots go in screenshots/<app>/<theme>.webp.
-SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).webp))
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,hero ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).webp))
 
 screenshots: $(SCREENSHOTS)
 
@@ -220,7 +220,7 @@ SIZE := 110 32
 
 define terminal_screenshot
 @mkdir -p $(@D)
-@THEME=$* sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
+@THEME=$* DECORATION=$(DECORATION) sh -c "$$SCREENSHOT_SH" screenshot $@ $(SIZE) $(WAIT) "$$$(SCENE)" "$(TITLE)"
 @echo "  $@"
 endef
 
@@ -258,6 +258,16 @@ screenshots/zellij/%.webp: SCENE = ZELLIJ_SCENE
 screenshots/zellij/%.webp: TITLE = Zellij
 screenshots/zellij/%.webp: WAIT = 3
 screenshots/zellij/%.webp: ghostty/%.toml zellij/%.kdl repo makefile
+	$(terminal_screenshot)
+
+# The hero shot is Zellij running Helix, Lazygit and zsh side by side in a
+# bigger window with no title bar.
+screenshots/hero/%.webp: SCENE = HERO_SCENE
+screenshots/hero/%.webp: TITLE = Darkstar
+screenshots/hero/%.webp: WAIT = 5
+screenshots/hero/%.webp: SIZE = 160 46
+screenshots/hero/%.webp: DECORATION = none
+screenshots/hero/%.webp: ghostty/%.toml helix/%.toml lazygit/darkstar.yml zellij/%.kdl repo makefile
 	$(terminal_screenshot)
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
@@ -1066,6 +1076,7 @@ confirm-close-surface = false
 window-save-state = never
 quit-after-last-window-closed = true
 macos-titlebar-style = native
+window-decoration = ${DECORATION:-auto}
 EOF
 
 {
@@ -1982,6 +1993,79 @@ export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
 exec zellij --config-dir "$SCENE_DIR/zellij" --new-session-with-layout "$SCENE_DIR/zellij/layout.kdl" --session darkstar-screenshot
 endef
 
+define hero_scene
+mkdir -p "$SCENE_DIR/xdg/helix/themes" "$SCENE_DIR/zellij/themes" "$SCENE_DIR/lazygit" "$SCENE_DIR/zsh"
+cp "$DARKSTAR/helix/$THEME.toml" "$SCENE_DIR/xdg/helix/themes/"
+printf 'theme = "%s"\n\n[editor]\ncursorline = true\n' "$THEME" > "$SCENE_DIR/xdg/helix/config.toml"
+cp "$DARKSTAR/zellij/$THEME.kdl" "$SCENE_DIR/zellij/themes/"
+cat > "$SCENE_DIR/lazygit/config.yml" <<'EOF'
+gui:
+  nerdFontsVersion: "3"
+  showRandomTip: false
+  showCommandLog: false
+git:
+  branchLogCmd: git log --graph --color=always --abbrev-commit --decorate --date=short --pretty=medium {{branchName}} --
+update:
+  method: never
+disableStartupPopups: true
+EOF
+cat > "$SCENE_DIR/zsh/.zshrc" <<'EOF'
+PROMPT='%F{blue}%1~%f %F{magenta}❯%f '
+print -P "${PROMPT}git log --oneline --graph -8"
+git log --oneline --graph --decorate --color=always -8
+print
+EOF
+cat > "$SCENE_DIR/zellij/config.kdl" <<KDL
+theme "$THEME"
+show_startup_tips false
+show_release_notes false
+session_serialization false
+on_force_close "quit"
+pane_frames true
+pane_frame_style "full"
+default_shell "zsh"
+KDL
+cat > "$SCENE_DIR/zellij/layout.kdl" <<KDL
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=2 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+    tab name="basket" focus=true {
+        pane split_direction="vertical" {
+            pane name="helix" size="55%" focus=true command="hx" {
+                args "src/cart.ts:24"
+                cwd "$DARKSTAR/repo"
+            }
+            pane split_direction="horizontal" {
+                pane name="lazygit" size="60%" command="lazygit" {
+                    args "-ucd" "$SCENE_DIR/lazygit" "-ucf" "$SCENE_DIR/lazygit/config.yml,$DARKSTAR/lazygit/darkstar.yml"
+                    cwd "$DARKSTAR/repo"
+                }
+                pane name="zsh" command="zsh" {
+                    args "-i"
+                    cwd "$DARKSTAR/repo"
+                }
+            }
+        }
+    }
+    tab name="server" {
+        pane
+    }
+}
+KDL
+export XDG_CONFIG_HOME="$SCENE_DIR/xdg" XDG_CACHE_HOME="$SCENE_DIR/cache"
+export ZDOTDIR="$SCENE_DIR/zsh"
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+export ZELLIJ_SOCKET_DIR="$(mktemp -d /tmp/zj.XXXX)"
+exec zellij --config-dir "$SCENE_DIR/zellij" --new-session-with-layout "$SCENE_DIR/zellij/layout.kdl" --session darkstar-screenshot
+endef
+
 
 define zed
 {
@@ -2850,6 +2934,7 @@ export NVIM_GROUPS := $(value nvim_groups)
 export NVIM_SCENE := $(value nvim_scene)
 export ZELLIJ := $(value zellij)
 export ZELLIJ_SCENE := $(value zellij_scene)
+export HERO_SCENE := $(value hero_scene)
 export ZED := $(value zed)
 export ZED_SCREENSHOT_SH := $(value zed_screenshot_sh)
 export VSCODE_PACKAGE := $(value vscode_package)
