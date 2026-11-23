@@ -210,8 +210,8 @@ repo: makefile
 	@sh -c "$$FIXTURE_SH"
 	@echo "  $@"
 
-# Screenshots go in screenshots/<app>/<theme>.png.
-SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).png))
+# Screenshots go in screenshots/<app>/<theme>.webp.
+SCREENSHOTS := $(foreach t,$(THEMES),$(foreach a,ghostty helix lazygit nvim opencode zellij zed vscode chrome firefox,screenshots/$(a)/$(t).webp))
 
 screenshots: $(SCREENSHOTS)
 
@@ -224,60 +224,60 @@ define terminal_screenshot
 @echo "  $@"
 endef
 
-screenshots/ghostty/%.png: SCENE = GHOSTTY_SCENE
-screenshots/ghostty/%.png: TITLE = Ghostty
-screenshots/ghostty/%.png: WAIT = 1
-screenshots/ghostty/%.png: ghostty/%.toml makefile
+screenshots/ghostty/%.webp: SCENE = GHOSTTY_SCENE
+screenshots/ghostty/%.webp: TITLE = Ghostty
+screenshots/ghostty/%.webp: WAIT = 1
+screenshots/ghostty/%.webp: ghostty/%.toml makefile
 	$(terminal_screenshot)
 
-screenshots/helix/%.png: SCENE = HELIX_SCENE
-screenshots/helix/%.png: TITLE = Helix
-screenshots/helix/%.png: WAIT = 2
-screenshots/helix/%.png: ghostty/%.toml helix/%.toml repo makefile
+screenshots/helix/%.webp: SCENE = HELIX_SCENE
+screenshots/helix/%.webp: TITLE = Helix
+screenshots/helix/%.webp: WAIT = 2
+screenshots/helix/%.webp: ghostty/%.toml helix/%.toml repo makefile
 	$(terminal_screenshot)
 
-screenshots/lazygit/%.png: SCENE = LAZYGIT_SCENE
-screenshots/lazygit/%.png: TITLE = Lazygit
-screenshots/lazygit/%.png: WAIT = 3
-screenshots/lazygit/%.png: ghostty/%.toml lazygit/darkstar.yml repo makefile
+screenshots/lazygit/%.webp: SCENE = LAZYGIT_SCENE
+screenshots/lazygit/%.webp: TITLE = Lazygit
+screenshots/lazygit/%.webp: WAIT = 3
+screenshots/lazygit/%.webp: ghostty/%.toml lazygit/darkstar.yml repo makefile
 	$(terminal_screenshot)
 
-screenshots/nvim/%.png: SCENE = NVIM_SCENE
-screenshots/nvim/%.png: TITLE = Neovim
-screenshots/nvim/%.png: WAIT = 2
-screenshots/nvim/%.png: ghostty/%.toml nvim/colors/darkstar.lua repo makefile
+screenshots/nvim/%.webp: SCENE = NVIM_SCENE
+screenshots/nvim/%.webp: TITLE = Neovim
+screenshots/nvim/%.webp: WAIT = 2
+screenshots/nvim/%.webp: ghostty/%.toml nvim/colors/darkstar.lua repo makefile
 	$(terminal_screenshot)
 
-screenshots/opencode/%.png: SCENE = OPENCODE_SCENE
-screenshots/opencode/%.png: TITLE = opencode
-screenshots/opencode/%.png: WAIT = 5
-screenshots/opencode/%.png: ghostty/%.toml opencode/darkstar.json repo makefile
+screenshots/opencode/%.webp: SCENE = OPENCODE_SCENE
+screenshots/opencode/%.webp: TITLE = opencode
+screenshots/opencode/%.webp: WAIT = 5
+screenshots/opencode/%.webp: ghostty/%.toml opencode/darkstar.json repo makefile
 	$(terminal_screenshot)
 
-screenshots/zellij/%.png: SCENE = ZELLIJ_SCENE
-screenshots/zellij/%.png: TITLE = Zellij
-screenshots/zellij/%.png: WAIT = 3
-screenshots/zellij/%.png: ghostty/%.toml zellij/%.kdl repo makefile
+screenshots/zellij/%.webp: SCENE = ZELLIJ_SCENE
+screenshots/zellij/%.webp: TITLE = Zellij
+screenshots/zellij/%.webp: WAIT = 3
+screenshots/zellij/%.webp: ghostty/%.toml zellij/%.kdl repo makefile
 	$(terminal_screenshot)
 
 # Zed sizes its windows in points rather than cells. 983×664 matches the
 # Ghostty windows above.
-screenshots/zed/%.png: zed/%.json repo makefile
+screenshots/zed/%.webp: zed/%.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$ZED_SCREENSHOT_SH" zed-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/vscode/%.png: vscode/package.json vscode/%-color-theme.json repo makefile
+screenshots/vscode/%.webp: vscode/package.json vscode/%-color-theme.json repo makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$VSCODE_SCREENSHOT_SH" vscode-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/chrome/%.png: chrome/%/manifest.json makefile
+screenshots/chrome/%.webp: chrome/%/manifest.json makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$CHROME_SCREENSHOT_SH" chrome-screenshot $@ 983 664
 	@echo "  $@"
 
-screenshots/firefox/%.png: firefox/manifest.json makefile
+screenshots/firefox/%.webp: firefox/manifest.json makefile
 	@mkdir -p $(@D)
 	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
@@ -287,7 +287,7 @@ screenshots/firefox/%.png: firefox/manifest.json makefile
 # Publishes screenshots/ to the gh-pages branch as a single commit that
 # replaces whatever was there, so old screenshots never pile up in history.
 # Images are then at
-# https://raw.githubusercontent.com/henrycatalinismith/darkstar/gh-pages/<app>/<theme>.png
+# https://raw.githubusercontent.com/henrycatalinismith/darkstar/gh-pages/<app>/<theme>.webp
 publish-screenshots:
 	@test -d screenshots || { echo "No screenshots/ to publish. Run make screenshots first."; exit 1; }
 	@remote=$$(git remote get-url origin) && tmp=$$(mktemp -d) && \
@@ -1097,12 +1097,13 @@ if [ -z "$window" ]; then
 fi
 
 sleep "$wait"
-screencapture -x -o -l "$window" "$out" || {
+screencapture -x -o -l "$window" "$out.png" || {
   echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
   kill "$pid"
   exit 1
 }
 kill "$pid"
+cwebp -quiet -lossless "$out.png" -o "$out" && rm "$out.png"
 endef
 
 # Prints the macOS window number of the first window belonging to a PID.
@@ -2219,13 +2220,14 @@ osascript -e "tell application \"System Events\" to tell (first process whose un
   echo "couldn't resize the Zed window: does this terminal have Accessibility permission?" >&2
 
 sleep 4
-screencapture -x -o -l "$window" "$out" || {
+screencapture -x -o -l "$window" "$out.png" || {
   echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
   kill "$pid"
   exit 1
 }
 kill "$pid"
 wait "$pid" 2>/dev/null || true
+cwebp -quiet -lossless "$out.png" -o "$out" && rm "$out.png"
 endef
 
 
@@ -2605,13 +2607,14 @@ osascript -e "tell application \"System Events\" to tell (first process whose un
   echo "couldn't resize the VS Code window: does this terminal have Accessibility permission?" >&2
 
 sleep 5
-screencapture -x -o -l "$window" "$out" || {
+screencapture -x -o -l "$window" "$out.png" || {
   echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
   kill "$pid"
   exit 1
 }
 kill "$pid"
 wait "$pid" 2>/dev/null || true
+cwebp -quiet -lossless "$out.png" -o "$out" && rm "$out.png"
 endef
 
 # Firefox applies "theme" normally and "dark_theme" when the system is in
@@ -2814,13 +2817,14 @@ osascript \
   echo "couldn't drive the browser window: does this terminal have Accessibility permission?" >&2
 
 sleep 2
-screencapture -x -o -l "$window" "$out" || {
+screencapture -x -o -l "$window" "$out.png" || {
   echo "screencapture failed: does this terminal have Screen Recording permission?" >&2
   kill "$pid"
   exit 1
 }
 kill "$pid"
 wait "$pid" 2>/dev/null || true
+cwebp -quiet -lossless "$out.png" -o "$out" && rm "$out.png"
 endef
 
 export PALETTE_darkstar := $(value darkstar_palette)
