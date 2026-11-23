@@ -12,7 +12,7 @@ Pending review.
 
 ### Firefox
 
-Pending review.
+Install from [Firefox Add-ons](https://addons.mozilla.org/addon/darkstar-theme/).
 
 ### Ghostty
 
