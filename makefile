@@ -2233,7 +2233,7 @@ define vscode_package
 {
   "name": "darkstar",
   "displayName": "Darkstar",
-  "description": "Solarized without the contrast bugs",
+  "description": "Deep space colour palette",
   "version": "0.1.0",
   "publisher": "henrycatalinismith",
   "license": "MIT",
@@ -2620,7 +2620,7 @@ define firefox
 {
   "manifest_version": 2,
   "name": "Darkstar",
-  "description": "Solarized without the contrast bugs",
+  "description": "Deep space colour palette",
   "version": "0.1.0",
   "author": "Henry Catalini Smith",
   "homepage_url": "https://github.com/henrycatalinismith/darkstar",
@@ -2680,7 +2680,7 @@ define chrome
 {
   "manifest_version": 3,
   "name": "{{title}}",
-  "description": "Solarized without the contrast bugs",
+  "description": "Deep space colour palette",
   "version": "0.1.0",
   "homepage_url": "https://github.com/henrycatalinismith/darkstar",
   "theme": {
