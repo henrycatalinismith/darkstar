@@ -80,7 +80,7 @@ OUTPUTS := \
 	vscode/package.json \
 	$(THEMES:%=vscode/%-color-theme.json)
 
-all: $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/darkstar.xpi
+all: $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 
 ghostty/%.toml: TEMPLATE = GHOSTTY
 helix/%.toml: TEMPLATE = HELIX
@@ -143,6 +143,17 @@ firefox/darkstar.xpi: firefox/manifest.json
 	@cd firefox && zip -q -X darkstar.xpi manifest.json
 	@echo "  $@"
 
+# Chrome themes can't switch with the system's light or dark mode, so
+# Darkstar and Lightstar are separate themes, each in its own folder. Load
+# one unpacked from chrome://extensions with developer mode on.
+CHROME_OUTPUTS := $(THEMES:%=chrome/%/manifest.json)
+
+chrome/%/manifest.json: makefile
+	@mkdir -p $(@D)
+	@printf '%s\n' "$$CHROME" | PALETTE="$$PALETTE_$*" awk "$$RENDER_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
 check:
 	@for t in $(THEMES); do echo "$$t"; PALETTE=$$(printenv "PALETTE_$$t") awk -v strict=1 "$$CHECK_AWK" || exit 1; done
 
@@ -174,7 +185,7 @@ install: all
 	install -m 644 vscode/package.json $(VSCODE_EXTENSION)/package.json
 
 clean:
-	rm -f $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi
+	rm -f $(OUTPUTS) lazygit/darkstar.yml opencode/darkstar.json firefox/manifest.json firefox/darkstar.xpi $(THEMES:%=chrome/%/manifest.json)
 	rm -rf repo
 
 # A small git repo with fixed authors, dates and contents, so the
@@ -394,6 +405,8 @@ selection_primary     surface600  -
 raised_max            surface600  -
 very_dark             surface700  -
 linenr                surface800  -
+tab_strip             surface100  -
+tab_selected          surface400  -
 endef
 
 # Lightstar is Darkstar for light backgrounds.
@@ -535,6 +548,8 @@ selection_primary     surface600  -
 raised_max            surface600  -
 very_dark             surface700  -
 linenr                surface800  -
+tab_strip             surface400  -
+tab_selected          surface100  -
 endef
 
 define common_awk
@@ -584,6 +599,10 @@ define render_awk
   while (match(line, /\{\{[^}]*\}\}/)) {
     n = split(substr(line, RSTART + 2, RLENGTH - 4), w, " ")
     if (n == 1) value = colour(w[1])
+    else if (n == 2 && w[1] == "rgb") {
+      value = colour(w[2])
+      value = channel(value, 2) ", " channel(value, 4) ", " channel(value, 6)
+    }
     else {
       printf "line %d: can't render '%s'\n", NR, substr(line, RSTART, RLENGTH) > "/dev/stderr"
       failed = 1
@@ -2561,23 +2580,23 @@ endef
 
 define firefox_colors
     "colors": {
-      "frame": "{{background_two}}",
-      "frame_inactive": "{{background_two}}",
+      "frame": "{{tab_strip}}",
+      "frame_inactive": "{{tab_strip}}",
       "tab_background_text": "{{bright_black}}",
-      "tab_selected": "{{background}}",
+      "tab_selected": "{{tab_selected}}",
       "tab_text": "{{foreground}}",
       "tab_line": "{{blue}}",
       "tab_loading": "{{blue}}",
       "tab_background_separator": "{{very_dark}}",
-      "toolbar": "{{background}}",
+      "toolbar": "{{tab_selected}}",
       "toolbar_text": "{{foreground}}",
       "toolbar_top_separator": "{{very_dark}}",
       "toolbar_bottom_separator": "{{very_dark}}",
       "toolbar_vertical_separator": "{{very_dark}}",
-      "toolbar_field": "{{background_two}}",
+      "toolbar_field": "{{tab_strip}}",
       "toolbar_field_text": "{{foreground}}",
       "toolbar_field_border": "{{very_dark}}",
-      "toolbar_field_focus": "{{background_two}}",
+      "toolbar_field_focus": "{{tab_strip}}",
       "toolbar_field_text_focus": "{{foreground}}",
       "toolbar_field_border_focus": "{{blue}}",
       "toolbar_field_highlight": "{{selection_primary}}",
@@ -2587,19 +2606,58 @@ define firefox_colors
       "button_background_active": "{{selection_primary}}",
       "icons": "{{foreground}}",
       "icons_attention": "{{bright_blue}}",
-      "popup": "{{background_two}}",
+      "popup": "{{tab_strip}}",
       "popup_text": "{{foreground}}",
       "popup_border": "{{very_dark}}",
       "popup_highlight": "{{selection_primary}}",
       "popup_highlight_text": "{{foreground}}",
-      "sidebar": "{{background_two}}",
+      "sidebar": "{{tab_strip}}",
       "sidebar_text": "{{foreground}}",
       "sidebar_border": "{{very_dark}}",
       "sidebar_highlight": "{{selection_primary}}",
       "sidebar_highlight_text": "{{foreground}}",
-      "ntp_background": "{{background}}",
+      "ntp_background": "{{tab_selected}}",
       "ntp_text": "{{foreground}}"
     }
+endef
+
+# Chrome themes want colours as [r, g, b] arrays, hence {{rgb ...}}.
+define chrome
+{
+  "manifest_version": 3,
+  "name": "{{title}}",
+  "description": "Solarized without the contrast bugs",
+  "version": "0.1.0",
+  "homepage_url": "https://github.com/henrycatalinismith/darkstar",
+  "theme": {
+    "colors": {
+      "frame": [{{rgb tab_strip}}],
+      "frame_inactive": [{{rgb tab_strip}}],
+      "frame_incognito": [{{rgb surface_low}}],
+      "frame_incognito_inactive": [{{rgb surface_low}}],
+      "background_tab": [{{rgb tab_strip}}],
+      "background_tab_inactive": [{{rgb tab_strip}}],
+      "background_tab_incognito": [{{rgb surface_low}}],
+      "background_tab_incognito_inactive": [{{rgb surface_low}}],
+      "toolbar": [{{rgb tab_selected}}],
+      "toolbar_text": [{{rgb foreground}}],
+      "toolbar_button_icon": [{{rgb foreground}}],
+      "tab_text": [{{rgb foreground}}],
+      "tab_background_text": [{{rgb bright_black}}],
+      "tab_background_text_inactive": [{{rgb bright_black}}],
+      "tab_background_text_incognito": [{{rgb bright_black}}],
+      "tab_background_text_incognito_inactive": [{{rgb bright_black}}],
+      "bookmark_text": [{{rgb foreground}}],
+      "omnibox_background": [{{rgb tab_strip}}],
+      "omnibox_text": [{{rgb foreground}}],
+      "ntp_background": [{{rgb tab_selected}}],
+      "ntp_text": [{{rgb foreground}}],
+      "ntp_link": [{{rgb bright_blue}}],
+      "ntp_header": [{{rgb blue}}],
+      "button_background": [{{rgb tab_strip}}]
+    }
+  }
+}
 endef
 
 export PALETTE_darkstar := $(value darkstar_palette)
@@ -2630,3 +2688,4 @@ export VSCODE_THEME := $(value vscode_theme)
 export VSCODE_SCREENSHOT_SH := $(value vscode_screenshot_sh)
 export FIREFOX := $(value firefox)
 export FIREFOX_COLORS := $(value firefox_colors)
+export CHROME := $(value chrome)

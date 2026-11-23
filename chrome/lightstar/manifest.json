@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Lightstar",
+  "description": "Solarized without the contrast bugs",
+  "version": "0.1.0",
+  "homepage_url": "https://github.com/henrycatalinismith/darkstar",
+  "theme": {
+    "colors": {
+      "frame": [222, 237, 238],
+      "frame_inactive": [222, 237, 238],
+      "frame_incognito": [250, 252, 249],
+      "frame_incognito_inactive": [250, 252, 249],
+      "background_tab": [222, 237, 238],
+      "background_tab_inactive": [222, 237, 238],
+      "background_tab_incognito": [250, 252, 249],
+      "background_tab_incognito_inactive": [250, 252, 249],
+      "toolbar": [250, 252, 249],
+      "toolbar_text": [27, 40, 45],
+      "toolbar_button_icon": [27, 40, 45],
+      "tab_text": [27, 40, 45],
+      "tab_background_text": [82, 97, 101],
+      "tab_background_text_inactive": [82, 97, 101],
+      "tab_background_text_incognito": [82, 97, 101],
+      "tab_background_text_incognito_inactive": [82, 97, 101],
+      "bookmark_text": [27, 40, 45],
+      "omnibox_background": [222, 237, 238],
+      "omnibox_text": [27, 40, 45],
+      "ntp_background": [250, 252, 249],
+      "ntp_text": [27, 40, 45],
+      "ntp_link": [0, 88, 141],
+      "ntp_header": [6, 118, 186],
+      "button_background": [222, 237, 238]
+    }
+  }
+}
