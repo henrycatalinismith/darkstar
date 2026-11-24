@@ -8,11 +8,11 @@ Deep space colour palette
 
 ### Chrome
 
-Pending review.
+Install the [Chrome theme](https://chromewebstore.google.com/detail/darkstar/olncaikphfnffpeeibilekkpajnmobgp)
 
 ### Firefox
 
-Install from [Firefox Add-ons](https://addons.mozilla.org/addon/darkstar-theme/).
+Install the [Firefox theme](https://addons.mozilla.org/addon/darkstar-theme/).
 
 ### Ghostty
 
