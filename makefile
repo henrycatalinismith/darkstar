@@ -4,6 +4,7 @@
 #   make check    fail if any colour is below its minimum contrast
 #   make palette  print every colour with its contrast ratio
 #   make swatches draw every colour into screenshots/swatch/<theme>.svg
+#   make hexes    write every hex value into screenshots/hex/<theme>.json
 #   make install  copy the theme files into ~/.config
 #   make repo     build ./repo, a test git repo with fixed dates
 #   make screenshots  capture each app in Ghostty (macOS only)
@@ -251,6 +252,14 @@ screenshots/swatch/%.svg: makefile
 	@mv $@.tmp $@
 	@echo "  $@"
 
+hexes: $(THEMES:%=screenshots/hex/%.json)
+
+screenshots/hex/%.json: makefile
+	@mkdir -p $(@D)
+	@PALETTE="$$PALETTE_$*" awk "$$HEX_AWK" > $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv $@.tmp $@
+	@echo "  $@"
+
 VSCODE_EXTENSION := ~/.vscode/extensions/henrycatalinismith.darkstar-0.1.0
 
 install: all
@@ -359,13 +368,13 @@ screenshots/firefox/%.webp: firefox/manifest.json makefile
 	@THEME=$* sh -c "$$FIREFOX_SCREENSHOT_SH" firefox-screenshot $@ 983 664
 	@echo "  $@"
 
-.PHONY: all check palette swatches install clean screenshots gh-pages chrome-store
+.PHONY: all check palette swatches hexes install clean screenshots gh-pages chrome-store
 
 # Publishes index.html and screenshots/ to the gh-pages branch as a single
 # commit that replaces whatever was there, so old screenshots never pile up
 # in history. Images are then at
 # https://raw.githubusercontent.com/henrycatalinismith/darkstar/gh-pages/<app>/<theme>.webp
-gh-pages: swatches
+gh-pages: hexes
 	@test -d screenshots || { echo "No screenshots/ to publish. Run make screenshots first."; exit 1; }
 	@remote=$$(git remote get-url origin) && tmp=$$(mktemp -d) && \
 		cp -R screenshots/ "$$tmp/" && cp index.html "$$tmp/" && touch "$$tmp/.nojekyll" && \
@@ -791,6 +800,21 @@ BEGIN {
     }
   }
   print "</svg>"
+}
+endef
+
+# Writes every step of every colour family as JSON for the tonal steps
+# table on index.html.
+define hex_awk
+BEGIN {
+  printf "{\n  \"tones\": ["
+  n = split("gray red orange yellow green cyan blue magenta surface", families, " ")
+  for (col = 1; col <= n; col++) {
+    printf "%s\n    [\"%s\", [", (col > 1 ? "," : ""), families[col]
+    for (s = 1; s <= 8; s++) printf "%s\"%s\"", (s > 1 ? ", " : ""), colour(families[col] s "00")
+    printf "]]"
+  }
+  print "\n  ]\n}"
 }
 endef
 
@@ -2982,6 +3006,7 @@ export PALETTE_lightstar := $(value lightstar_palette)
 export RENDER_AWK := $(value common_awk)$(newline)$(value render_awk)
 export CHECK_AWK := $(value common_awk)$(newline)$(value check_awk)
 export SWATCH_AWK := $(value common_awk)$(newline)$(value swatch_awk)
+export HEX_AWK := $(value common_awk)$(newline)$(value hex_awk)
 export GHOSTTY := $(value ghostty)
 export HELIX := $(value helix)
 export LAZYGIT := $(value lazygit)

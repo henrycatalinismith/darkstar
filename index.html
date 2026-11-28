@@ -188,11 +188,43 @@
     }
 
 
-    .swatch {
-      display: block;
-      width: 100%;
-      height: auto;
+    .tones {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 0.5rem;
       margin: 10rem 0;
+    }
+
+    .tones__family {
+      margin: 0 0 0.25rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: inherit;
+    }
+
+    .tones__step {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .tones__chip {
+      height: 2rem;
+      border-radius: 4px;
+      box-shadow: 0 0 0 1px var(--ring);
+    }
+
+    .tones__hex {
+      font-family: "Sometype Mono", ui-monospace, monospace;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .tones {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem 0.75rem;
+      }
     }
 
     .repo-link {
@@ -285,8 +317,7 @@
       </p>
     </section>
 
-    <img class="swatch" data-swatch
-      data-alt="The {theme} palette: nine colour families from gray through red, orange, yellow, green, cyan, blue and magenta to surface, each stepping from light at the top to dark at the bottom" />
+    <div class="tones" data-tones></div>
 
     <section class="intro">
       <p class="intro__text">
@@ -334,14 +365,43 @@
       for (const img of document.querySelectorAll("[data-shot]")) {
         img.src = `${base}${img.dataset.shot}/${variant}.webp`;
       }
-      for (const img of document.querySelectorAll("[data-swatch]")) {
-        img.src = `swatch/${variant}.svg`;
-      }
       const name = variant[0].toUpperCase() + variant.slice(1);
       for (const img of document.querySelectorAll("[data-alt]")) {
         img.alt = img.dataset.alt.replace("{theme}", name);
       }
       button.textContent = theme === "light" ? "☀ light" : "☾ dark";
+      renderTones(variant);
+    }
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      node.className = className;
+      if (text) node.textContent = text;
+      return node;
+    }
+
+    async function renderTones(variant) {
+      const res = await fetch(`hex/${variant}.json`);
+      if (!res.ok) return;
+      const { tones } = await res.json();
+      if (document.documentElement.dataset.theme !== (variant === "lightstar" ? "light" : "dark")) return;
+
+      document.querySelector("[data-tones]").replaceChildren(
+        ...tones.map(([family, hexes]) => {
+          const col = el("div", "tones__column");
+          col.append(
+            el("h2", "tones__family", family),
+            ...hexes.map((hex) => {
+              const step = el("div", "tones__step");
+              const chip = el("span", "tones__chip");
+              chip.style.background = hex;
+              step.append(chip, el("code", "tones__hex", hex));
+              return step;
+            }),
+          );
+          return col;
+        }),
+      );
     }
 
     button.addEventListener("click", () => {
